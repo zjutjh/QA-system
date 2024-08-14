@@ -1,0 +1,9 @@
+FROM golang
+
+WORKDIR /go/src/app
+COPY . .
+
+VOLUME ["/opt/go/QA/public/static", "/opt/go/QA/public/xlsx", "/opt/go/QA/logs"]
+
+EXPOSE 8080
+CMD ["./QA"]
