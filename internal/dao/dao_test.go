@@ -369,7 +369,10 @@ func BenchmarkCreateSurvey(b *testing.B) {
 	title :=fmt.Sprintf("title%d",time.Now().Unix())
 	survey := models.Survey{Title: title, Desc: "desc", Img: "img", Deadline: time.Now()}
 	for i := 0; i < b.N; i++ {
-		d.CreateSurvey(context.Background(), survey)
+		_,err :=d.CreateSurvey(context.Background(), survey)
+		if err != nil {
+			b.Error(err)
+		}
 	}
 }
 
@@ -381,7 +384,10 @@ func BenchmarkGetSurveyByTitle(b *testing.B) {
 	b.ResetTimer()
 	title :=fmt.Sprintf("title%d",time.Now().Unix())
 	for i := 0; i < b.N; i++ {
-		d.GetSurveyByTitle(context.Background(), title, 1, 1)
+		_,_,err:=d.GetSurveyByTitle(context.Background(), title, 1, 1)
+		if err != nil {
+			b.Error(err)
+		}
 	}
 }
 
@@ -392,7 +398,10 @@ func BenchmarkDeleteSurvey(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 15; i < b.N; i++ {
-		d.DeleteSurvey(context.Background(), i)
+		err:=d.DeleteSurvey(context.Background(), i)
+		if err != nil {
+			b.Error(err)
+		}
 	}
 }
 
@@ -403,7 +412,10 @@ func BenchmarkUpdateSurvey(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		d.UpdateSurvey(context.Background(), 1, "title", "desc", "img", time.Now())
+		err:=d.UpdateSurvey(context.Background(), 1, "title", "desc", "img", time.Now())
+		if err != nil {
+			b.Error(err)
+		}
 	}
 }
 
@@ -415,7 +427,11 @@ func BenchmarkSaveAnswerSheet(b *testing.B) {
 	b.ResetTimer()
 	answerSheet := AnswerSheet{SurveyID: 1, Time: "2021-01-01 00:00:00"}
 	for i := 0; i < b.N; i++ {
-		d.SaveAnswerSheet(context.Background(), answerSheet,[]int{})
+		err:=d.SaveAnswerSheet(context.Background(), answerSheet,[]int{})
+		if err != nil {
+			b.Error(err)
+		}
+
 	}
 }
 
@@ -426,7 +442,10 @@ func BenchmarkGetAnswerSheetBySurveyID(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		d.GetAnswerSheetBySurveyID(context.Background(), 1, 1, 1,"",true)
+		_,_,err:=d.GetAnswerSheetBySurveyID(context.Background(), 1, 1, 1,"",true)
+		if err != nil {
+			b.Error(err)
+		}
 	}
 }
 
@@ -437,6 +456,9 @@ func BenchmarkDeleteAnswerSheetBySurveyID(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		d.DeleteAnswerSheetBySurveyID(context.Background(), 1)
+		err:=d.DeleteAnswerSheetBySurveyID(context.Background(), 1)
+		if err != nil {
+			b.Error(err)
+		}
 	}
 }
