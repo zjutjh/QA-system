@@ -76,8 +76,8 @@ func CreateSurvey(c *gin.Context) {
 		}
 		questionMap := make(map[string]bool)
 		for _, question := range data.Questions {
-			if question.Subject == "" || question.QuestionType == 0 {
-				c.Error(&gin.Error{Err: errors.New("问题" + strconv.Itoa(question.SerialNum) + "标题为空或类型错误"), Type: gin.ErrorTypeAny})
+			if question.Subject == ""  {
+				c.Error(&gin.Error{Err: errors.New("问题" + strconv.Itoa(question.SerialNum) + "标题为空"), Type: gin.ErrorTypeAny})
 				utils.JsonErrorResponse(c, code.SurveyIncomplete)
 				return
 			}
@@ -88,7 +88,7 @@ func CreateSurvey(c *gin.Context) {
 			}
 			questionMap[question.Subject] = true
 			if question.QuestionType == 1 || question.QuestionType == 2 {
-				if len(question.Options) < 2 {
+				if len(question.Options) < 1 {
 					c.Error(&gin.Error{Err: errors.New("问题"+strconv.Itoa(question.SerialNum)+"选项数量太少"), Type: gin.ErrorTypeAny})
 					utils.JsonErrorResponse(c, code.SurveyIncomplete)
 					return
@@ -197,7 +197,7 @@ func UpdateSurveyStatus(c *gin.Context) {
 					utils.JsonErrorResponse(c, code.ServerError)
 					return
 				}
-				if len(options) < 2 {
+				if len(options) < 1 {
 					c.Error(&gin.Error{Err: errors.New("问题"+strconv.Itoa(question.ID)+"选项太少"), Type: gin.ErrorTypeAny})
 					utils.JsonErrorResponse(c, code.SurveyIncomplete)
 					return
