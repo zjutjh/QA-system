@@ -7,6 +7,7 @@ import (
 	"QA-System/internal/pkg/utils"
 	"QA-System/internal/service"
 	"errors"
+	"fmt"
 	"math"
 	"sort"
 	"strings"
@@ -204,6 +205,7 @@ func UpdateSurveyStatus(c *gin.Context) {
 				for _, option := range options {
 					if option.Content == "" {
 						c.Error(&gin.Error{Err: errors.New("选项信息不完整"), Type: gin.ErrorTypeAny})
+						fmt.Println(option.ID)
 						utils.JsonErrorResponse(c, code.SurveyIncomplete)
 						return
 					}
@@ -781,15 +783,16 @@ func GetSurveyStatistics(c *gin.Context) {
 	if start > end {
 		start = end
 	}
+	
+	// 按序号排序
+	sort.Slice(response, func(i, j int) bool {
+		return response[i].SerialNum < response[j].SerialNum
+	})
 
 	// 访问切片
 	resp := response[start:end]
 	totalSumPage := math.Ceil(float64(len(response)) / float64(data.PageSize))
 
-	// 按序号排序
-	sort.Slice(resp, func(i, j int) bool {
-		return resp[i].SerialNum < resp[j].SerialNum
-	})
 
 	utils.JsonSuccessResponse(c, gin.H{
 		"statistics":     resp,
