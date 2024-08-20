@@ -71,14 +71,14 @@ func Register(c *gin.Context) {
 	//判断是否有权限
 	adminKey := service.GetConfigKey()
 	if adminKey != data.Key {
-		c.Error(&gin.Error{Err: errors.New("没有权限"), Type: gin.ErrorTypeAny})
+		c.Error(&gin.Error{Err: errors.New(data.Username+"没有权限"), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.NotSuperAdmin)
 		return
 	}
 	//判断用户是否存在
 	err = service.IsAdminExist(data.Username)
 	if err == nil {
-		c.Error(&gin.Error{Err: errors.New("用户已存在"), Type: gin.ErrorTypeAny})
+		c.Error(&gin.Error{Err: errors.New(data.Username+"用户已存在"), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.UserExist)
 		return
 	}
