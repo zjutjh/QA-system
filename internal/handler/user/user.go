@@ -8,7 +8,7 @@ import (
 	"QA-System/internal/pkg/utils"
 	"QA-System/internal/service"
 	"errors"
-
+	"strconv"
 
 	"time"
 
@@ -42,7 +42,7 @@ func SubmitSurvey(c *gin.Context) {
 		return
 	}
 	if len(questions) != len(data.QuestionsList) {
-		c.Error(&gin.Error{Err: errors.New("问题数量不一致"), Type: gin.ErrorTypeAny})
+		c.Error(&gin.Error{Err: errors.New("问卷问题和上传问题数量不一致"), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
 	}
@@ -61,18 +61,18 @@ func SubmitSurvey(c *gin.Context) {
 			return
 		}
 		if question.SerialNum != q.SerialNum {
-			c.Error(&gin.Error{Err: errors.New("问题序号不一致"), Type: gin.ErrorTypeAny})
+			c.Error(&gin.Error{Err: errors.New("问题序号"+strconv.Itoa(question.ID)+"和"+strconv.Itoa(q.SerialNum)+"不一致"), Type: gin.ErrorTypeAny})
 			utils.JsonErrorResponse(c, code.ServerError)
 			return
 		}
 		if question.SurveyID != survey.ID {
-			c.Error(&gin.Error{Err: errors.New("问题不属于该问卷"), Type: gin.ErrorTypeAny})
+			c.Error(&gin.Error{Err: errors.New("问题"+strconv.Itoa(question.SerialNum)+"不属于该问卷"), Type: gin.ErrorTypeAny})
 			utils.JsonErrorResponse(c, code.ServerError)
 			return
 		}
 		// 判断必填字段是否为空
 		if question.Required && q.Answer == "" {
-			c.Error(&gin.Error{Err: errors.New("必填字段为空"), Type: gin.ErrorTypeAny})
+			c.Error(&gin.Error{Err: errors.New("问题"+strconv.Itoa(q.SerialNum)+"必填字段为空"), Type: gin.ErrorTypeAny})
 			utils.JsonErrorResponse(c, code.ServerError)
 			return
 		}

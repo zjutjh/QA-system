@@ -158,7 +158,7 @@ func DeleteSurvey(id int) error {
 		return err
 	}
 	var answerSheets []dao.AnswerSheet
-	answerSheets, _, err = d.GetAnswerSheetBySurveyID(ctx,id, 0, 0,"",false)
+	answerSheets, _, err = d.GetAnswerSheetBySurveyID(ctx, id, 0, 0, "", false)
 	if err != nil {
 		return err
 	}
@@ -203,7 +203,7 @@ func DeleteSurvey(id int) error {
 	return err
 }
 
-func GetSurveyAnswers(id int, num int, size int,text string,unique bool) (dao.AnswersResonse, *int64, error) {
+func GetSurveyAnswers(id int, num int, size int, text string, unique bool) (dao.AnswersResonse, *int64, error) {
 	var answerSheets []dao.AnswerSheet
 	data := make([]dao.QuestionAnswers, 0)
 	time := make([]string, 0)
@@ -222,7 +222,7 @@ func GetSurveyAnswers(id int, num int, size int,text string,unique bool) (dao.An
 		data = append(data, q)
 	}
 	//获取答卷
-	answerSheets, total, err = d.GetAnswerSheetBySurveyID(ctx,id, num, size,text,unique)
+	answerSheets, total, err = d.GetAnswerSheetBySurveyID(ctx, id, num, size, text, unique)
 	if err != nil {
 		return dao.AnswersResonse{}, nil, err
 	}
@@ -277,8 +277,17 @@ func ProcessResponse(response []interface{}, pageNum, pageSize int, title string
 	}
 	sortedResponse = append(status2Response, status1Response...)
 
+	if pageNum < 1 {
+		pageNum = 1
+	}
+	if pageSize < 1 {
+		pageSize = 10 // 默认的页大小
+	}
 	startIdx := (pageNum - 1) * pageSize
 	endIdx := startIdx + pageSize
+	if startIdx > len(sortedResponse) {
+		return []interface{}{}, &num // 如果起始索引超出范围，返回空数据
+	}
 	if endIdx > len(sortedResponse) {
 		endIdx = len(sortedResponse)
 	}
@@ -331,7 +340,7 @@ func GetAllSurveyAnswers(id int) (dao.AnswersResonse, error) {
 		q.QuestionType = question.QuestionType
 		data = append(data, q)
 	}
-	answerSheets, _, err = d.GetAnswerSheetBySurveyID(ctx,id, 0, 0,"",true)
+	answerSheets, _, err = d.GetAnswerSheetBySurveyID(ctx, id, 0, 0, "", true)
 	if err != nil {
 		return dao.AnswersResonse{}, err
 	}
@@ -352,13 +361,12 @@ func GetAllSurveyAnswers(id int) (dao.AnswersResonse, error) {
 	return dao.AnswersResonse{QuestionAnswers: data, Time: time}, nil
 }
 
-func GetSurveyAnswersBySurveyID(sid int)([]dao.AnswerSheet, error){
-	answerSheets,_, err := d.GetAnswerSheetBySurveyID(ctx, sid, 0, 0,"",true)
+func GetSurveyAnswersBySurveyID(sid int) ([]dao.AnswerSheet, error) {
+	answerSheets, _, err := d.GetAnswerSheetBySurveyID(ctx, sid, 0, 0, "", true)
 	return answerSheets, err
 }
 
-
-func GetOptionByQIDAndAnswer(qid int,answer string) (*models.Option, error) {
+func GetOptionByQIDAndAnswer(qid int, answer string) (*models.Option, error) {
 	option, err := d.GetOptionByQIDAndAnswer(ctx, qid, answer)
 	return option, err
 }
@@ -372,7 +380,6 @@ func GetQuestionsByIDs(ids []int) ([]models.Question, error) {
 	questions, err := d.GetQuestionsByIDs(ctx, ids)
 	return questions, err
 }
-
 
 func contains(arr []string, str string) bool {
 	for _, a := range arr {
@@ -465,7 +472,7 @@ func createQuestionsAndOptions(questions []dao.Question, sid int) ([]string, err
 		q.Unique = question.Unique
 		q.OtherOption = question.OtherOption
 		q.QuestionType = question.QuestionType
-		q.Reg=question.Reg
+		q.Reg = question.Reg
 		imgs = append(imgs, question.Img)
 		q, err := d.CreateQuestion(ctx, q)
 		if err != nil {
@@ -657,6 +664,9 @@ func HandleDownloadFile(answers dao.AnswersResonse, survey *models.Survey) (stri
 	}
 	// 设置列宽
 	for colIndex, width := range maxWidths {
+		if width > 255 {
+			width = 255
+		}
 		if err := streamWriter.SetColWidth(colIndex+1, colIndex+1, float64(width)); err != nil {
 			return "", errors.New("设置列宽失败原因: " + err.Error())
 		}

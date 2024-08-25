@@ -9,6 +9,7 @@ import (
 	"errors"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -53,7 +54,7 @@ func CreateSurvey(c *gin.Context) {
 	questionNumMap := make(map[int]bool)
 	for i, question := range data.Questions {
 		if questionNumMap[question.SerialNum] {
-			c.Error(&gin.Error{Err: errors.New("题目序号重复"), Type: gin.ErrorTypeAny})
+			c.Error(&gin.Error{Err: errors.New("题目序号" + strconv.Itoa(question.SerialNum) + "重复"), Type: gin.ErrorTypeAny})
 			utils.JsonErrorResponse(c, code.ServerError)
 			return
 		}
@@ -68,38 +69,38 @@ func CreateSurvey(c *gin.Context) {
 	//检测问卷是否填写完整
 	if data.Status == 2 {
 		if data.Title == "" || len(data.Questions) == 0 {
-			c.Error(&gin.Error{Err: errors.New("问卷信息填写不完整"), Type: gin.ErrorTypeAny})
+			c.Error(&gin.Error{Err: errors.New("问卷标题为空或问卷没有问题"), Type: gin.ErrorTypeAny})
 			utils.JsonErrorResponse(c, code.SurveyIncomplete)
 			return
 		}
 		questionMap := make(map[string]bool)
 		for _, question := range data.Questions {
-			if question.Subject == "" || question.QuestionType == 0 {
-				c.Error(&gin.Error{Err: errors.New("问题问题信息填写不完整"), Type: gin.ErrorTypeAny})
+			if question.Subject == ""  {
+				c.Error(&gin.Error{Err: errors.New("问题" + strconv.Itoa(question.SerialNum) + "标题为空"), Type: gin.ErrorTypeAny})
 				utils.JsonErrorResponse(c, code.SurveyIncomplete)
 				return
 			}
 			if questionMap[question.Subject] {
-				c.Error(&gin.Error{Err: errors.New("问题题目重复"), Type: gin.ErrorTypeAny})
+				c.Error(&gin.Error{Err: errors.New("问题"+strconv.Itoa(question.SerialNum)+"题目"+question.Subject+"重复"), Type: gin.ErrorTypeAny})
 				utils.JsonErrorResponse(c, code.SurveyContentRepeat)
 				return
 			}
 			questionMap[question.Subject] = true
 			if question.QuestionType == 1 || question.QuestionType == 2 {
-				if len(question.Options) < 2 {
-					c.Error(&gin.Error{Err: errors.New("选项信息填写不完整"), Type: gin.ErrorTypeAny})
+				if len(question.Options) < 1 {
+					c.Error(&gin.Error{Err: errors.New("问题"+strconv.Itoa(question.SerialNum)+"选项数量太少"), Type: gin.ErrorTypeAny})
 					utils.JsonErrorResponse(c, code.SurveyIncomplete)
 					return
 				}
 				optionMap := make(map[string]bool)
 				for _, option := range question.Options {
 					if option.Content == "" {
-						c.Error(&gin.Error{Err: errors.New("选项信息不完整"), Type: gin.ErrorTypeAny})
+						c.Error(&gin.Error{Err: errors.New("选项"+strconv.Itoa(option.SerialNum)+"内容为空"), Type: gin.ErrorTypeAny})
 						utils.JsonErrorResponse(c, code.SurveyIncomplete)
 						return
 					}
 					if optionMap[option.Content] {
-						c.Error(&gin.Error{Err: errors.New("选项信息重复"), Type: gin.ErrorTypeAny})
+						c.Error(&gin.Error{Err: errors.New("选项内容"+option.Content+"重复"), Type: gin.ErrorTypeAny})
 						utils.JsonErrorResponse(c, code.SurveyContentRepeat)
 						return
 					}
@@ -148,7 +149,7 @@ func UpdateSurveyStatus(c *gin.Context) {
 	}
 	//判断权限
 	if (user.AdminType != 2) && (user.AdminType != 1 || survey.UserID != user.ID) && !service.UserInManage(user.ID, survey.ID) {
-		c.Error(&gin.Error{Err: errors.New("无权限"), Type: gin.ErrorTypeAny})
+		c.Error(&gin.Error{Err: errors.New(user.Username+"无权限"), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.NoPermission)
 		return
 	}
@@ -167,7 +168,7 @@ func UpdateSurveyStatus(c *gin.Context) {
 		}
 		questions, err := service.GetQuestionsBySurveyID(survey.ID)
 		if err == gorm.ErrRecordNotFound {
-			c.Error(&gin.Error{Err: errors.New("问卷信息填写不完整"), Type: gin.ErrorTypeAny})
+			c.Error(&gin.Error{Err: errors.New("问卷问题不存在"), Type: gin.ErrorTypeAny})
 			utils.JsonErrorResponse(c, code.SurveyIncomplete)
 			return
 		} else if err != nil {
@@ -178,12 +179,12 @@ func UpdateSurveyStatus(c *gin.Context) {
 		questionMap := make(map[string]bool)
 		for _, question := range questions {
 			if question.Subject == "" {
-				c.Error(&gin.Error{Err: errors.New("问题问题信息填写不完整"), Type: gin.ErrorTypeAny})
+				c.Error(&gin.Error{Err: errors.New("问题"+strconv.Itoa(question.SerialNum)+"内容填写为空"), Type: gin.ErrorTypeAny})
 				utils.JsonErrorResponse(c, code.SurveyIncomplete)
 				return
 			}
 			if questionMap[question.Subject] {
-				c.Error(&gin.Error{Err: errors.New("问题题目重复"), Type: gin.ErrorTypeAny})
+				c.Error(&gin.Error{Err: errors.New("问题题目"+question.Subject+"重复"), Type: gin.ErrorTypeAny})
 				utils.JsonErrorResponse(c, code.SurveyContentRepeat)
 				return
 			}
@@ -195,20 +196,20 @@ func UpdateSurveyStatus(c *gin.Context) {
 					utils.JsonErrorResponse(c, code.ServerError)
 					return
 				}
-				if len(options) < 2 {
-					c.Error(&gin.Error{Err: errors.New("选项信息填写不完整"), Type: gin.ErrorTypeAny})
+				if len(options) < 1 {
+					c.Error(&gin.Error{Err: errors.New("问题"+strconv.Itoa(question.ID)+"选项太少"), Type: gin.ErrorTypeAny})
 					utils.JsonErrorResponse(c, code.SurveyIncomplete)
 					return
 				}
 				optionMap := make(map[string]bool)
 				for _, option := range options {
 					if option.Content == "" {
-						c.Error(&gin.Error{Err: errors.New("选项信息不完整"), Type: gin.ErrorTypeAny})
+						c.Error(&gin.Error{Err: errors.New("选项"+strconv.Itoa(option.SerialNum)+"内容未填"), Type: gin.ErrorTypeAny})
 						utils.JsonErrorResponse(c, code.SurveyIncomplete)
 						return
 					}
 					if optionMap[option.Content] {
-						c.Error(&gin.Error{Err: errors.New("选项内容重复"), Type: gin.ErrorTypeAny})
+						c.Error(&gin.Error{Err: errors.New("选项内容"+option.Content+"重复"), Type: gin.ErrorTypeAny})
 						utils.JsonErrorResponse(c, code.SurveyContentRepeat)
 						return
 					}
@@ -260,7 +261,7 @@ func UpdateSurvey(c *gin.Context) {
 	}
 	//判断权限
 	if (user.AdminType != 2) && (user.AdminType != 1 || survey.UserID != user.ID) && !service.UserInManage(user.ID, survey.ID) {
-		c.Error(&gin.Error{Err: errors.New("无权限"), Type: gin.ErrorTypeAny})
+		c.Error(&gin.Error{Err: errors.New(user.Username+"无权限"), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.NoPermission)
 		return
 	}
@@ -287,7 +288,7 @@ func UpdateSurvey(c *gin.Context) {
 	questionNumMap := make(map[int]bool)
 	for i, question := range data.Questions {
 		if questionNumMap[question.SerialNum] {
-			c.Error(&gin.Error{Err: errors.New("题目序号重复"), Type: gin.ErrorTypeAny})
+			c.Error(&gin.Error{Err: errors.New("题目序号" + strconv.Itoa(question.SerialNum) + "重复"), Type: gin.ErrorTypeAny})
 			utils.JsonErrorResponse(c, code.ServerError)
 			return
 		}
@@ -342,7 +343,7 @@ func DeleteSurvey(c *gin.Context) {
 	}
 	//判断权限
 	if (user.AdminType != 2) && (user.AdminType != 1 || survey.UserID != user.ID) && !service.UserInManage(user.ID, survey.ID) {
-		c.Error(&gin.Error{Err: errors.New("无权限"), Type: gin.ErrorTypeAny})
+		c.Error(&gin.Error{Err: errors.New(user.Username+"无权限"), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.NoPermission)
 		return
 	}
@@ -393,7 +394,7 @@ func GetSurveyAnswers(c *gin.Context) {
 	}
 	//判断权限
 	if (user.AdminType != 2) && (user.AdminType != 1 || survey.UserID != user.ID) && !service.UserInManage(user.ID, survey.ID) {
-		c.Error(&gin.Error{Err: errors.New("无权限"), Type: gin.ErrorTypeAny})
+		c.Error(&gin.Error{Err: errors.New(user.Username+"无权限"), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.NoPermission)
 		return
 	}
@@ -514,7 +515,7 @@ func GetSurvey(c *gin.Context) {
 	}
 	//判断权限
 	if (user.AdminType != 2) && (user.AdminType != 1 || survey.UserID != user.ID) && !service.UserInManage(user.ID, survey.ID) {
-		c.Error(&gin.Error{Err: errors.New("无权限"), Type: gin.ErrorTypeAny})
+		c.Error(&gin.Error{Err: errors.New(user.Username+"无权限"), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.NoPermission)
 		return
 	}
@@ -598,7 +599,7 @@ func DownloadFile(c *gin.Context) {
 	}
 	// 判断权限
 	if (user.AdminType != 2) && (user.AdminType != 1 || survey.UserID != user.ID) && !service.UserInManage(user.ID, survey.ID) {
-		c.Error(&gin.Error{Err: errors.New("无权限"), Type: gin.ErrorTypeAny})
+		c.Error(&gin.Error{Err: errors.New(user.Username+"无权限"), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.NoPermission)
 		return
 	}
@@ -661,7 +662,7 @@ func GetSurveyStatistics(c *gin.Context) {
 	}
 
 	if (user.AdminType != 2) && (user.AdminType != 1 || survey.UserID != user.ID) && !service.UserInManage(user.ID, survey.ID) {
-		c.Error(&gin.Error{Err: errors.New("无权限"), Type: gin.ErrorTypeAny})
+		c.Error(&gin.Error{Err: errors.New(user.Username+"无权限"), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.NoPermission)
 		return
 	}
@@ -781,15 +782,16 @@ func GetSurveyStatistics(c *gin.Context) {
 	if start > end {
 		start = end
 	}
+	
+	// 按序号排序
+	sort.Slice(response, func(i, j int) bool {
+		return response[i].SerialNum < response[j].SerialNum
+	})
 
 	// 访问切片
 	resp := response[start:end]
 	totalSumPage := math.Ceil(float64(len(response)) / float64(data.PageSize))
 
-	// 按序号排序
-	sort.Slice(resp, func(i, j int) bool {
-		return resp[i].SerialNum < resp[j].SerialNum
-	})
 
 	utils.JsonSuccessResponse(c, gin.H{
 		"statistics":     resp,
