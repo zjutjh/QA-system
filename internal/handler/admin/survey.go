@@ -7,7 +7,6 @@ import (
 	"QA-System/internal/pkg/utils"
 	"QA-System/internal/service"
 	"errors"
-	"fmt"
 	"math"
 	"sort"
 	"strconv"
@@ -206,7 +205,6 @@ func UpdateSurveyStatus(c *gin.Context) {
 				for _, option := range options {
 					if option.Content == "" {
 						c.Error(&gin.Error{Err: errors.New("选项"+strconv.Itoa(option.SerialNum)+"内容未填"), Type: gin.ErrorTypeAny})
-						fmt.Println(option.ID)
 						utils.JsonErrorResponse(c, code.SurveyIncomplete)
 						return
 					}
