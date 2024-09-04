@@ -52,6 +52,12 @@ func SubmitSurvey(c *gin.Context) {
 		utils.JsonErrorResponse(c, code.TimeBeyondError)
 		return
 	}
+	// 判断问卷是否开放
+	if survey.Status != 2 {
+		c.Error(&gin.Error{Err: errors.New("问卷未开放"), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.SurveyNotOpen)
+		return
+	}
 	// 逐个判断问题答案
 	for _, q := range data.QuestionsList {
 		question, err := service.GetQuestionByID(q.QuestionID)
