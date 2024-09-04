@@ -25,6 +25,8 @@ func Init(r *gin.Engine) {
 		}
 		admin := api.Group("/admin", middlewares.CheckLogin)
 		{
+			api.POST("/admin/update", a.UpdatePassword)
+			api.POST("/admin/reset", a.ResetPassword)
 			admin.POST("/create", a.CreateSurvey)
 			admin.PUT("/update/status", a.UpdateSurveyStatus)
 			admin.PUT("/update/questions", a.UpdateSurvey)

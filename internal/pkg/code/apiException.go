@@ -32,6 +32,8 @@ var (
 	PermissionNotExist	  = NewError(http.StatusInternalServerError, 200518, "该用户无权限，请勿操作！")
 	SurveyIncomplete 	  = NewError(http.StatusInternalServerError, 200519, "问卷未填写完整，请重新检查！")
 	SurveyContentRepeat   = NewError(http.StatusInternalServerError, 200520, "问卷问题或选项重复，请重新填写！")
+	NewPasswordSame	   	  = NewError(http.StatusInternalServerError, 200521, "新密码与旧密码相同")
+	SurveyNotOpen		  = NewError(http.StatusInternalServerError, 200522, "问卷未开放")
 	NotInit               = NewError(http.StatusNotFound, 200404, http.StatusText(http.StatusNotFound))
 	NotFound              = NewError(http.StatusNotFound, 200404, http.StatusText(http.StatusNotFound))
 	Unknown               = NewError(http.StatusInternalServerError, 300500, "系统异常，请稍后重试!")

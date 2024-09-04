@@ -727,3 +727,10 @@ func HandleDownloadFile(answers dao.AnswersResonse, survey *models.Survey) (stri
 
 	return url, nil
 }
+
+
+func UpdateAdminPassword(id int, password string) error {
+	password = utils.AesEncrypt(password)
+	err := d.UpdateUserPassword(ctx, id, password)
+	return err
+}
