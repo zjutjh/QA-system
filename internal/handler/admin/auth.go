@@ -141,3 +141,44 @@ func UpdatePassword(c *gin.Context) {
 	utils.JsonSuccessResponse(c, nil)
 }
 
+type ResetPasswordData struct {
+	UserName string `json:"username" binding:"required"`
+}
+
+//重置密码
+func ResetPassword(c *gin.Context) {
+	var data ResetPasswordData
+	err := c.ShouldBindJSON(&data)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("重置密码失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ParamError)
+		return
+	}
+	//鉴权
+	admin, err := service.GetUserSession(c)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("获取用户缓存信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.NotLogin)
+		return
+	}
+	if admin.AdminType != 2 {
+		c.Error(&gin.Error{Err: errors.New(admin.Username+"没有权限"), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.NoPermission)
+		return
+	}
+	//判断用户是否存在
+	user, err := service.GetAdminByUsername(data.UserName)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("获取用户信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
+	//重置密码
+	err = service.UpdateAdminPassword(user.ID, "jhwl")
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("重置密码失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
+	utils.JsonSuccessResponse(c, nil)
+}

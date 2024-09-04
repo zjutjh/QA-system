@@ -17,6 +17,7 @@ func Init(r *gin.Engine) {
 		api.POST("/admin/reg", a.Register)
 		api.POST("/admin/login", a.Login)
 		api.POST("/admin/update", a.UpdatePassword)
+		api.POST("/admin/reset", a.ResetPassword)
 		user:= api.Group("/user")
 		{
 			user.POST("/submit", u.SubmitSurvey)
