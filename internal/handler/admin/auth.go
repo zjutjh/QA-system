@@ -7,6 +7,7 @@ import (
 	"QA-System/internal/service"
 	"errors"
 
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -96,3 +97,47 @@ func Register(c *gin.Context) {
 
 	utils.JsonSuccessResponse(c, nil)
 }
+
+type UpdatePasswordData struct {
+	OldPassword string `json:"old_password" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required"`
+}
+
+// 修改密码
+func UpdatePassword(c *gin.Context) {
+	var data UpdatePasswordData
+	err := c.ShouldBindJSON(&data)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("重置密码失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ParamError)
+		return
+	}
+	//判断用户是否存在
+	user, err := service.GetUserSession(c)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("获取用户缓存信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.NotLogin)
+		return
+	}
+	// 判断旧密码是否正确
+	if user.Password != data.OldPassword {
+		c.Error(&gin.Error{Err: errors.New("旧密码错误"), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.NoThatPasswordOrWrong)
+		return
+	}
+	// 判断新密码是否与旧密码相同
+	if user.Password == data.NewPassword {
+		c.Error(&gin.Error{Err: errors.New("新密码与旧密码相同"), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.NewPasswordSame)
+		return
+	}
+	//修改密码
+	err = service.UpdateAdminPassword(user.ID, data.NewPassword)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("修改密码失败的原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
+	utils.JsonSuccessResponse(c, nil)
+}
+
