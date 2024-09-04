@@ -1,12 +1,13 @@
 package admin
 
 import (
-	"QA-System/internal/service"
-	"QA-System/internal/pkg/utils"
 	"QA-System/internal/pkg/code"
+	"QA-System/internal/pkg/utils"
+	"QA-System/internal/service"
 	"errors"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type CreatePermissionData struct {
@@ -52,9 +53,13 @@ func CreatrPermission(c *gin.Context) {
 		return
 	}
 	err = service.CheckPermission(user.ID, data.SurveyID)
-	if err != nil {
+	if err == nil {
 		c.Error(&gin.Error{Err: errors.New("权限已存在"), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.PermissionExist)
+		return
+	}else if err !=gorm.ErrRecordNotFound{
+		c.Error(&gin.Error{Err: errors.New("查询权限失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
 		return
 	}
 	//创建权限
