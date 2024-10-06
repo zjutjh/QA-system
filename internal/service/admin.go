@@ -146,6 +146,10 @@ func UpdateSurvey(id int, title string, desc string, img string, questions []dao
 	return nil
 }
 
+func UpdateSurveyPart(id int, title string, desc string, img string,  time time.Time) error {
+	return d.UpdateSurvey(ctx, id, title, desc, img, time)
+}
+
 func UserInManage(uid int, sid int) bool {
 	_, err := d.GetManageByUIDAndSID(ctx, uid, sid)
 	return err == nil
