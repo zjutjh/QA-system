@@ -9,12 +9,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/xuri/excelize/v2"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/xuri/excelize/v2"
 )
 
 func GetAdminByUsername(username string) (*models.User, error) {
@@ -146,7 +147,7 @@ func UpdateSurvey(id int, title string, desc string, img string, questions []dao
 	return nil
 }
 
-func UpdateSurveyPart(id int, title string, desc string, img string,  time time.Time) error {
+func UpdateSurveyPart(id int, title string, desc string, img string, time time.Time) error {
 	return d.UpdateSurvey(ctx, id, title, desc, img, time)
 }
 
@@ -248,10 +249,8 @@ func GetSurveyAnswers(id int, num int, size int, text string, unique bool) (dao.
 	return dao.AnswersResonse{QuestionAnswers: data, Time: time}, total, nil
 }
 
-func GetAllSurveyByUserID(userId int) ([]interface{}, error) {
-	surveys, err := d.GetAllSurveyByUserID(ctx, userId)
-	response := getSurveyResponse(surveys)
-	return response, err
+func GetAllSurveyByUserID(userId int) ([]models.Survey, error) {
+	return d.GetAllSurveyByUserID(ctx, userId)
 }
 
 func ProcessResponse(response []interface{}, pageNum, pageSize int, title string) ([]interface{}, *int64) {
@@ -300,16 +299,26 @@ func ProcessResponse(response []interface{}, pageNum, pageSize int, title string
 	return pagedResponse, &num
 }
 
-func GetAllSurvey(pageNum, pageSize int, title string) ([]interface{}, *int64, error) {
-	surveys, num, error := d.GetSurveyByTitle(ctx, title, pageNum, pageSize)
-	if error != nil {
-		return nil, nil, error
-	}
-	response := getSurveyResponse(surveys)
-	return response, num, nil
+func GetAllSurvey(pageNum, pageSize int, title string) ([]models.Survey, *int64, error) {
+	return d.GetSurveyByTitle(ctx, title, pageNum, pageSize)
 }
 
-func getSurveyResponse(surveys []models.Survey) []interface{} {
+func BottomlistedSurvey(originalSurveys []models.Survey) []models.Survey {
+	bottomlisted := make([]models.Survey, 0)
+	surveys := make([]models.Survey, 0)
+	for _, survey := range originalSurveys {
+		if survey.Deadline.Before(time.Now()) {
+			survey.Status = 3
+			bottomlisted = append(bottomlisted, survey)
+		} else {
+			surveys = append(surveys, survey)
+		}
+	}
+	surveys = append(surveys, bottomlisted...)
+	return surveys
+}
+
+func GetSurveyResponse(surveys []models.Survey) []interface{} {
 	response := make([]interface{}, 0)
 	for _, survey := range surveys {
 		surveyResponse := map[string]interface{}{
@@ -731,7 +740,6 @@ func HandleDownloadFile(answers dao.AnswersResonse, survey *models.Survey) (stri
 
 	return url, nil
 }
-
 
 func UpdateAdminPassword(id int, password string) error {
 	password = utils.AesEncrypt(password)
