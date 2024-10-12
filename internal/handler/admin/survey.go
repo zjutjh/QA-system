@@ -443,17 +443,20 @@ func GetAllSurvey(c *gin.Context) {
 		return
 	}
 	// 获取问卷
-	response := make([]interface{}, 0)
+	var response []interface{}
+	var surveys []models.Survey
 	var totalPageNum *int64
 	if user.AdminType == 2 {
-		response, totalPageNum, err = service.GetAllSurvey(data.PageNum, data.PageSize, data.Title)
+		surveys, totalPageNum, err = service.GetAllSurvey(data.PageNum, data.PageSize, data.Title)
 		if err != nil {
 			c.Error(&gin.Error{Err: errors.New("获取问卷信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 			utils.JsonErrorResponse(c, code.ServerError)
 			return
 		}
+		surveys = service.SortSurvey(surveys)
+		response = service.GetSurveyResponse(surveys)
 	} else {
-		response, err = service.GetAllSurveyByUserID(user.ID)
+		surveys, err = service.GetAllSurveyByUserID(user.ID)
 		if err != nil {
 			c.Error(&gin.Error{Err: errors.New("获取问卷信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 			utils.JsonErrorResponse(c, code.ServerError)
@@ -472,14 +475,10 @@ func GetAllSurvey(c *gin.Context) {
 				utils.JsonErrorResponse(c, code.ServerError)
 				return
 			}
-			managedSurveyResponse := map[string]interface{}{
-				"id":     managedSurvey.ID,
-				"title":  managedSurvey.Title,
-				"status": managedSurvey.Status,
-				"num":    managedSurvey.Num,
-			}
-			response = append(response, managedSurveyResponse)
+			surveys = append(surveys, *managedSurvey)
 		}
+		surveys = service.SortSurvey(surveys)
+		response = service.GetSurveyResponse(surveys)
 		response, totalPageNum = service.ProcessResponse(response, data.PageNum, data.PageSize, data.Title)
 	}
 
