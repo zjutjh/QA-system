@@ -496,7 +496,7 @@ func GetAllSurvey(c *gin.Context) {
 			utils.JsonErrorResponse(c, code.ServerError)
 			return
 		}
-		surveys = service.BottomlistedSurvey(surveys)
+		surveys = service.SortSurvey(surveys)
 		response = service.GetSurveyResponse(surveys)
 	} else {
 		surveys, err = service.GetAllSurveyByUserID(user.ID)
@@ -520,7 +520,7 @@ func GetAllSurvey(c *gin.Context) {
 			}
 			surveys = append(surveys, *managedSurvey)
 		}
-		surveys = service.BottomlistedSurvey(surveys)
+		surveys = service.SortSurvey(surveys)
 		response = service.GetSurveyResponse(surveys)
 		response, totalPageNum = service.ProcessResponse(response, data.PageNum, data.PageSize, data.Title)
 	}

@@ -264,22 +264,8 @@ func ProcessResponse(response []interface{}, pageNum, pageSize int, title string
 		}
 		response = filteredResponse
 	}
-	num := int64(len(response))
-	sort.Slice(response, func(i, j int) bool {
-		return response[i].(map[string]interface{})["id"].(int) > response[j].(map[string]interface{})["id"].(int)
-	})
-	var sortedResponse []interface{}
-	var status2Response, status1Response []interface{}
-	for _, item := range response {
-		itemMap := item.(map[string]interface{})
-		if itemMap["status"].(int) == 2 {
-			status2Response = append(status2Response, item)
-		} else {
-			status1Response = append(status1Response, item)
-		}
-	}
-	sortedResponse = append(status2Response, status1Response...)
 
+	num := int64(len(response))
 	if pageNum < 1 {
 		pageNum = 1
 	}
@@ -288,13 +274,13 @@ func ProcessResponse(response []interface{}, pageNum, pageSize int, title string
 	}
 	startIdx := (pageNum - 1) * pageSize
 	endIdx := startIdx + pageSize
-	if startIdx > len(sortedResponse) {
+	if startIdx > len(response) {
 		return []interface{}{}, &num // 如果起始索引超出范围，返回空数据
 	}
-	if endIdx > len(sortedResponse) {
-		endIdx = len(sortedResponse)
+	if endIdx > len(response) {
+		endIdx = len(response)
 	}
-	pagedResponse := sortedResponse[startIdx:endIdx]
+	pagedResponse := response[startIdx:endIdx]
 
 	return pagedResponse, &num
 }
@@ -303,19 +289,30 @@ func GetAllSurvey(pageNum, pageSize int, title string) ([]models.Survey, *int64,
 	return d.GetSurveyByTitle(ctx, title, pageNum, pageSize)
 }
 
-func BottomlistedSurvey(originalSurveys []models.Survey) []models.Survey {
-	bottomlisted := make([]models.Survey, 0)
-	surveys := make([]models.Survey, 0)
+func SortSurvey(originalSurveys []models.Survey) []models.Survey {
+	sort.Slice(originalSurveys, func(i, j int) bool {
+		return originalSurveys[i].ID > originalSurveys[j].ID
+	})
+
+	status1Surveys := make([]models.Survey, 0)
+	status2Surveys := make([]models.Survey, 0)
+	status3Surveys := make([]models.Survey, 0)
 	for _, survey := range originalSurveys {
 		if survey.Deadline.Before(time.Now()) {
 			survey.Status = 3
-			bottomlisted = append(bottomlisted, survey)
-		} else {
-			surveys = append(surveys, survey)
+			status3Surveys = append(status3Surveys, survey)
+		}
+
+		if survey.Status == 1 {
+			status1Surveys = append(status1Surveys, survey)
+		} else if survey.Status == 2 {
+			status2Surveys = append(status2Surveys, survey)
 		}
 	}
-	surveys = append(surveys, bottomlisted...)
-	return surveys
+
+	status2Surveys = append(status2Surveys, status1Surveys...)
+	sortedSurveys := append(status2Surveys, status3Surveys...)
+	return sortedSurveys
 }
 
 func GetSurveyResponse(surveys []models.Survey) []interface{} {
