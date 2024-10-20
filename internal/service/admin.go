@@ -738,3 +738,29 @@ func UpdateAdminPassword(id int, password string) error {
 	err := d.UpdateUserPassword(ctx, id, password)
 	return err
 }
+
+func CreateQuestionPre(name string, value []string) error {
+	// 将 value 序列化为 JSON 字符串
+    jsonValue, err := json.Marshal(value)
+    if err != nil {
+        return errors.New("预先信息序列化失败: " + err.Error())
+    }
+	err = d.CreateType(ctx, name, string(jsonValue))
+	return err
+}
+
+func GetQuestionPre(name string) ([]string, error) {
+	value, err := d.GetType(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+
+	// 将 value 反序列化为 []string
+	var valueSlice []string
+	err = json.Unmarshal([]byte(value), &valueSlice)
+	if err != nil {
+		return nil, errors.New("预先信息反序列化失败: " + err.Error())
+	}
+
+	return valueSlice, nil
+}

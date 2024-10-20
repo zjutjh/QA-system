@@ -852,3 +852,76 @@ func GetSurveyStatistics(c *gin.Context) {
 		"total_sum_page": totalSumPage,
 	})
 }
+
+type GetQuestionPreResponse struct {
+	Type string `form:"type"`
+}
+
+func GetQuestionPre(c *gin.Context) {
+	var data GetQuestionPreResponse
+	if err := c.ShouldBindQuery(&data); err != nil {
+		c.Error(&gin.Error{Err: errors.New("获取参数失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ParamError)
+		return
+	}
+
+	user, err := service.GetUserSession(c)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("获取用户缓存信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.NotLogin)
+		return
+	}
+
+	if (user.AdminType != 2) && (user.AdminType != 1) {
+		c.Error(&gin.Error{Err: errors.New(user.Username+"无权限"), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.NoPermission)
+		return
+	}
+
+	// 获取预先信息
+	value, err := service.GetQuestionPre(data.Type)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("获取预先信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
+	utils.JsonSuccessResponse(c, gin.H{
+		"value": value,
+	})
+}
+
+type CreateQuestionPreResponse struct {
+    Type  string   `json:"type"`
+    Value []string `json:"value"`
+}
+
+func CreateQuestionPre(c *gin.Context) {
+	var data CreateQuestionPreResponse
+	if err := c.ShouldBindJSON(&data); err != nil {
+		c.Error(&gin.Error{Err: errors.New("获取参数失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ParamError)
+		return
+	}
+
+	user, err := service.GetUserSession(c)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("获取用户缓存信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.NotLogin)
+		return
+	}
+
+	if (user.AdminType != 2) && (user.AdminType != 1) {
+		c.Error(&gin.Error{Err: errors.New(user.Username+"无权限"), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.NoPermission)
+		return
+	}
+
+	// 创建预先信息
+	err = service.CreateQuestionPre(data.Type, data.Value)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("创建预先信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
+	utils.JsonSuccessResponse(c, nil)
+}
