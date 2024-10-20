@@ -149,6 +149,10 @@ func UpdateSurvey(id int, surveyType, limit uint, verify bool, title string, des
 	return nil
 }
 
+func UpdateSurveyPart(id int, title string, desc string, img string, time time.Time) error {
+	return d.UpdateSurvey(ctx, id, title, desc, img, time)
+}
+
 func UserInManage(uid int, sid int) bool {
 	_, err := d.GetManageByUIDAndSID(ctx, uid, sid)
 	return err == nil
@@ -748,4 +752,22 @@ func UpdateAdminPassword(id int, password string) error {
 
 func DeleteOauthRecord(sid int) error {
 	return d.DeleteRecordSheets(ctx, sid)
+}
+
+func CreateQuestionPre(name string, value []string) error {
+	// 将String[]类型转化为String,以逗号分隔
+	pre := strings.Join(value, ",")
+	err := d.CreateType(ctx, name, pre)
+	return err
+}
+
+func GetQuestionPre(name string) ([]string, error) {
+	value, err := d.GetType(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+
+	// 将预先信息转化为String[]类型
+	pre := strings.Split(value, ",")
+	return pre, nil
 }
