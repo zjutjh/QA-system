@@ -147,7 +147,7 @@ func UpdateSurvey(id int, title string, desc string, img string, questions []dao
 	return nil
 }
 
-func UpdateSurveyPart(id int, title string, desc string, img string,  time time.Time) error {
+func UpdateSurveyPart(id int, title string, desc string, img string, time time.Time) error {
 	return d.UpdateSurvey(ctx, id, title, desc, img, time)
 }
 
@@ -738,7 +738,6 @@ func HandleDownloadFile(answers dao.AnswersResonse, survey *models.Survey) (stri
 	return url, nil
 }
 
-
 func UpdateAdminPassword(id int, password string) error {
 	password = utils.AesEncrypt(password)
 	err := d.UpdateUserPassword(ctx, id, password)
@@ -746,12 +745,9 @@ func UpdateAdminPassword(id int, password string) error {
 }
 
 func CreateQuestionPre(name string, value []string) error {
-	// 将 value 序列化为 JSON 字符串
-    jsonValue, err := json.Marshal(value)
-    if err != nil {
-        return errors.New("预先信息序列化失败: " + err.Error())
-    }
-	err = d.CreateType(ctx, name, string(jsonValue))
+	// 将String[]类型转化为String,以逗号分隔
+	pre := strings.Join(value, ",")
+	err := d.CreateType(ctx, name, pre)
 	return err
 }
 
@@ -760,13 +756,7 @@ func GetQuestionPre(name string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// 将 value 反序列化为 []string
-	var valueSlice []string
-	err = json.Unmarshal([]byte(value), &valueSlice)
-	if err != nil {
-		return nil, errors.New("预先信息反序列化失败: " + err.Error())
-	}
-
-	return valueSlice, nil
+	// 将预先信息转化为String[]类型
+	pre := strings.Split(value, ",")
+	return pre, nil
 }
