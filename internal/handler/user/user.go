@@ -17,6 +17,7 @@ import (
 
 type SubmitServeyData struct {
 	ID            int                 `json:"id" binding:"required"`
+	StudentID     string              `json:"stu_id"`
 	QuestionsList []dao.QuestionsList `json:"questions_list"`
 }
 
@@ -67,19 +68,32 @@ func SubmitSurvey(c *gin.Context) {
 			return
 		}
 		if question.SerialNum != q.SerialNum {
-			c.Error(&gin.Error{Err: errors.New("问题序号"+strconv.Itoa(question.ID)+"和"+strconv.Itoa(q.SerialNum)+"不一致"), Type: gin.ErrorTypeAny})
+			c.Error(&gin.Error{Err: errors.New("问题序号" + strconv.Itoa(question.ID) + "和" + strconv.Itoa(q.SerialNum) + "不一致"), Type: gin.ErrorTypeAny})
 			utils.JsonErrorResponse(c, code.ServerError)
 			return
 		}
 		if question.SurveyID != survey.ID {
-			c.Error(&gin.Error{Err: errors.New("问题"+strconv.Itoa(question.SerialNum)+"不属于该问卷"), Type: gin.ErrorTypeAny})
+			c.Error(&gin.Error{Err: errors.New("问题" + strconv.Itoa(question.SerialNum) + "不属于该问卷"), Type: gin.ErrorTypeAny})
 			utils.JsonErrorResponse(c, code.ServerError)
 			return
 		}
 		// 判断必填字段是否为空
 		if question.Required && q.Answer == "" {
-			c.Error(&gin.Error{Err: errors.New("问题"+strconv.Itoa(q.SerialNum)+"必填字段为空"), Type: gin.ErrorTypeAny})
+			c.Error(&gin.Error{Err: errors.New("问题" + strconv.Itoa(q.SerialNum) + "必填字段为空"), Type: gin.ErrorTypeAny})
 			utils.JsonErrorResponse(c, code.ServerError)
+			return
+		}
+	}
+	if survey.DailyLimit != 0 && survey.Verify == true {
+		limit, err := service.GetUserLimit(c, data.StudentID, survey.ID)
+		if err != nil {
+			c.Error(&gin.Error{Err: errors.New("获取用户投票次数失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.ServerError)
+			return
+		}
+		if limit >= int(survey.DailyLimit) {
+			c.Error(&gin.Error{Err: errors.New("投票次数已达上限"), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.VoteLimitError)
 			return
 		}
 	}
@@ -94,6 +108,12 @@ func SubmitSurvey(c *gin.Context) {
 	_, err = asynq.Client.Enqueue(task)
 	if err != nil {
 		c.Error(&gin.Error{Err: errors.New("任务入队失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
+	err = service.InscUserLimit(c, data.StudentID, survey.ID)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("更新用户投票次数失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
 	}
@@ -160,27 +180,32 @@ func GetSurvey(c *gin.Context) {
 			optionsResponse = append(optionsResponse, optionResponse)
 		}
 		questionMap := map[string]interface{}{
-			"id":            question.ID,
-			"serial_num":    question.SerialNum,
-			"subject":       question.Subject,
-			"describe":      question.Description,
-			"required":      question.Required,
-			"unique":        question.Unique,
-			"other_option":  question.OtherOption,
-			"img":           question.Img,
-			"question_type": question.QuestionType,
-			"reg":           question.Reg,
-			"options":       optionsResponse,
+			"id":             question.ID,
+			"serial_num":     question.SerialNum,
+			"subject":        question.Subject,
+			"describe":       question.Description,
+			"required":       question.Required,
+			"unique":         question.Unique,
+			"other_option":   question.OtherOption,
+			"img":            question.Img,
+			"question_type":  question.QuestionType,
+			"reg":            question.Reg,
+			"maximum_option": question.MaximumOption,
+			"minimum_option": question.MinimumOption,
+			"options":        optionsResponse,
 		}
 		questionsResponse = append(questionsResponse, questionMap)
 	}
 	response := map[string]interface{}{
-		"id":        survey.ID,
-		"title":     survey.Title,
-		"time":      survey.Deadline,
-		"desc":      survey.Desc,
-		"img":       survey.Img,
-		"questions": questionsResponse,
+		"id":          survey.ID,
+		"title":       survey.Title,
+		"time":        survey.Deadline,
+		"desc":        survey.Desc,
+		"img":         survey.Img,
+		"daily_limit": survey.DailyLimit,
+		"verify":      survey.Verify,
+		"survey_type": survey.Type,
+		"questions":   questionsResponse,
 	}
 
 	utils.JsonSuccessResponse(c, response)
@@ -197,7 +222,7 @@ func UploadImg(c *gin.Context) {
 	utils.JsonSuccessResponse(c, url)
 }
 
-//上传文件
+// 上传文件
 func UploadFile(c *gin.Context) {
 	url, err := service.HandleFileUpload(c)
 	if err != nil {
@@ -206,4 +231,125 @@ func UploadFile(c *gin.Context) {
 		return
 	}
 	utils.JsonSuccessResponse(c, url)
+}
+
+// 提交投票
+func SubmitVote(c *gin.Context) {
+	var data SubmitServeyData
+	err := c.ShouldBindJSON(&data)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("获取参数失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ParamError)
+		return
+	}
+	// 判断问卷问题和答卷问题数目是否一致
+	survey, err := service.GetSurveyByID(data.ID)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("获取问卷失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
+	questions, err := service.GetQuestionsBySurveyID(survey.ID)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("获取问题失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
+	if len(questions) != len(data.QuestionsList) {
+		c.Error(&gin.Error{Err: errors.New("问卷问题和上传问题数量不一致"), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
+	// 判断填写时间是否在问卷有效期内
+	if !survey.Deadline.IsZero() && survey.Deadline.Before(time.Now()) {
+		c.Error(&gin.Error{Err: errors.New("填写时间已过"), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.TimeBeyondError)
+		return
+	}
+	// 判断问卷是否开放
+	if survey.Status != 2 {
+		c.Error(&gin.Error{Err: errors.New("问卷未开放"), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.SurveyNotOpen)
+		return
+	}
+	// 逐个判断问题答案
+	for _, q := range data.QuestionsList {
+		question, err := service.GetQuestionByID(q.QuestionID)
+		if err != nil {
+			c.Error(&gin.Error{Err: errors.New("获取问题失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.ServerError)
+			return
+		}
+		if question.SerialNum != q.SerialNum {
+			c.Error(&gin.Error{Err: errors.New("问题序号" + strconv.Itoa(question.ID) + "和" + strconv.Itoa(q.SerialNum) + "不一致"), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.ServerError)
+			return
+		}
+		if question.SurveyID != survey.ID {
+			c.Error(&gin.Error{Err: errors.New("问题" + strconv.Itoa(question.SerialNum) + "不属于该问卷"), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.ServerError)
+			return
+		}
+		// 判断必填字段是否为空
+		if question.Required && q.Answer == "" {
+			c.Error(&gin.Error{Err: errors.New("问题" + strconv.Itoa(q.SerialNum) + "必填字段为空"), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.ServerError)
+			return
+		}
+	}
+	if survey.DailyLimit != 0 && survey.Verify == true {
+		limit, err := service.GetUserLimit(c, data.StudentID, survey.ID)
+		if err != nil {
+			c.Error(&gin.Error{Err: errors.New("获取用户投票次数失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.ServerError)
+			return
+		}
+		if limit >= int(survey.DailyLimit) {
+			c.Error(&gin.Error{Err: errors.New("投票次数已达上限"), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.VoteLimitError)
+			return
+		}
+	}
+	err = service.SubmitSurvey(data.ID, data.QuestionsList, time.Now().Format("2006-01-02 15:04:05"))
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("提交问卷失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
+	err = service.InscUserLimit(c, data.StudentID, survey.ID)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("更新用户投票次数失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
+	utils.JsonSuccessResponse(c, nil)
+}
+
+type OauthData struct {
+	StudenID string `json:"stu_id" binding:"required"`
+	Password string `json:"password" binding:"required"`
+	SurveyID int    `json:"survey_id" binding:"required"`
+}
+
+func Oauth(c *gin.Context) {
+	var data OauthData
+	err := c.ShouldBindJSON(&data)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("获取参数失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ParamError)
+		return
+	}
+	err = service.Oauth(data.StudenID, data.Password)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("认证失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
+	err = service.SetUserLimit(c, data.StudenID, data.SurveyID, 0)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("创建用户投票次数失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
+	utils.JsonSuccessResponse(c, nil)
 }

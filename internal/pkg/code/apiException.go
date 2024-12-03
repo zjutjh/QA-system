@@ -8,6 +8,10 @@ type Error struct {
 	Msg        string `json:"msg"`
 }
 
+func (e Error) Error() string {
+	return e.Msg
+}
+
 var (
 	ServerError           = NewError(http.StatusInternalServerError, 200500, "系统异常，请稍后重试!")
 	ParamError            = NewError(http.StatusInternalServerError, 200501, "参数错误")
@@ -29,16 +33,17 @@ var (
 	SurveyNotExist        = NewError(http.StatusInternalServerError, 200515, "问卷不存在")
 	PermissionExist       = NewError(http.StatusInternalServerError, 200516, "该用户已有权限，请勿重复操作！")
 	PermissionBelong      = NewError(http.StatusInternalServerError, 200517, "问卷为该用户所有，无需操作！")
-	PermissionNotExist	  = NewError(http.StatusInternalServerError, 200518, "该用户无权限，请勿操作！")
-	SurveyIncomplete 	  = NewError(http.StatusInternalServerError, 200519, "问卷未填写完整，请重新检查！")
+	PermissionNotExist    = NewError(http.StatusInternalServerError, 200518, "该用户无权限，请勿操作！")
+	SurveyIncomplete      = NewError(http.StatusInternalServerError, 200519, "问卷未填写完整，请重新检查！")
 	SurveyContentRepeat   = NewError(http.StatusInternalServerError, 200520, "问卷问题或选项重复，请重新填写！")
-	NewPasswordSame	   	  = NewError(http.StatusInternalServerError, 200521, "新密码与旧密码相同")
-	SurveyNotOpen		  = NewError(http.StatusInternalServerError, 200522, "问卷未开放")
+	NewPasswordSame       = NewError(http.StatusInternalServerError, 200521, "新密码与旧密码相同")
+	SurveyNotOpen         = NewError(http.StatusInternalServerError, 200522, "问卷未开放")
+	UserNotFound          = NewError(http.StatusInternalServerError, 200523, "用户不存在")
+	VoteLimitError        = NewError(http.StatusInternalServerError, 200524, "投票次数已达上限")
 	NotInit               = NewError(http.StatusNotFound, 200404, http.StatusText(http.StatusNotFound))
 	NotFound              = NewError(http.StatusNotFound, 200404, http.StatusText(http.StatusNotFound))
 	Unknown               = NewError(http.StatusInternalServerError, 300500, "系统异常，请稍后重试!")
 )
-
 
 func NewError(statusCode, Code int, msg string) *Error {
 	return &Error{
