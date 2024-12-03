@@ -19,7 +19,6 @@ func Init(r *gin.Engine) {
 		user := api.Group("/user")
 		{
 			user.POST("/submit/survey", u.SubmitSurvey)
-			user.POST("/submit/vote", u.SubmitVote)
 			user.GET("/get", u.GetSurvey)
 			user.POST("/upload/img", u.UploadImg)
 			user.POST("/upload/file", u.UploadFile)

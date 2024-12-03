@@ -40,6 +40,7 @@ var (
 	SurveyNotOpen         = NewError(http.StatusInternalServerError, 200522, "问卷未开放")
 	UserNotFound          = NewError(http.StatusInternalServerError, 200523, "用户不存在")
 	VoteLimitError        = NewError(http.StatusInternalServerError, 200524, "投票次数已达上限")
+	OptionNumError        = NewError(http.StatusInternalServerError, 200525, "选项数量不符合规范")
 	NotInit               = NewError(http.StatusNotFound, 200404, http.StatusText(http.StatusNotFound))
 	NotFound              = NewError(http.StatusNotFound, 200404, http.StatusText(http.StatusNotFound))
 	Unknown               = NewError(http.StatusInternalServerError, 300500, "系统异常，请稍后重试!")
