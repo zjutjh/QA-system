@@ -559,27 +559,33 @@ func GetSurvey(c *gin.Context) {
 			optionsResponse = append(optionsResponse, optionResponse)
 		}
 		questionMap := map[string]interface{}{
-			"id":            question.SerialNum,
-			"serial_num":    question.SerialNum,
-			"subject":       question.Subject,
-			"description":   question.Description,
-			"required":      question.Required,
-			"unique":        question.Unique,
-			"other_option":  question.OtherOption,
-			"img":           question.Img,
-			"question_type": question.QuestionType,
-			"reg":           question.Reg,
-			"options":       optionsResponse,
+			"id":             question.SerialNum,
+			"serial_num":     question.SerialNum,
+			"subject":        question.Subject,
+			"description":    question.Description,
+			"required":       question.Required,
+			"unique":         question.Unique,
+			"other_option":   question.OtherOption,
+			"img":            question.Img,
+			"question_type":  question.QuestionType,
+			"reg":            question.Reg,
+			"maximum_option": question.MaximumOption,
+			"minimum_option": question.MinimumOption,
+			"options":        optionsResponse,
 		}
 		questionsResponse = append(questionsResponse, questionMap)
 	}
 	response := map[string]interface{}{
-		"id":        survey.ID,
-		"title":     survey.Title,
-		"time":      survey.Deadline,
-		"desc":      survey.Desc,
-		"img":       survey.Img,
-		"questions": questionsResponse,
+		"id":          survey.ID,
+		"title":       survey.Title,
+		"time":        survey.Deadline,
+		"desc":        survey.Desc,
+		"img":         survey.Img,
+		"status":      survey.Status,
+		"survey_type": survey.Type,
+		"verify":      survey.Verify,
+		"day_limit":   survey.DailyLimit,
+		"questions":   questionsResponse,
 	}
 
 	utils.JsonSuccessResponse(c, response)

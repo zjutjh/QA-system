@@ -318,10 +318,11 @@ func GetSurveyResponse(surveys []models.Survey) []interface{} {
 	response := make([]interface{}, 0)
 	for _, survey := range surveys {
 		surveyResponse := map[string]interface{}{
-			"id":     survey.ID,
-			"title":  survey.Title,
-			"status": survey.Status,
-			"num":    survey.Num,
+			"id":          survey.ID,
+			"title":       survey.Title,
+			"status":      survey.Status,
+			"survey_type": survey.Type,
+			"num":         survey.Num,
 		}
 		response = append(response, surveyResponse)
 	}
