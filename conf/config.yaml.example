@@ -1,3 +1,7 @@
+server:
+  port: "8080"
+  debug: false
+
 mysql:
   name: QA
   host: "127.0.0.1"
@@ -32,7 +36,8 @@ url:
 
 key: 
 
-
+user:
+  host: 
 
 log:
   development: true       # 是否开启开发模式  true: 开启 false: 关闭
