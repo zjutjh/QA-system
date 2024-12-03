@@ -68,6 +68,13 @@ func CreateSurvey(c *gin.Context) {
 		}
 		questionNumMap[question.SerialNum] = true
 		question.SerialNum = i + 1
+
+		//检测多选题目的最多选项数和最少选项数
+		if question.MaximumOption < question.MinimumOption {
+			c.Error(&gin.Error{Err: errors.New("多选最多选项数小于最少选项数"), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.ServerError)
+			return
+		}
 	}
 	//检测问卷是否填写完整
 	if data.Status == 2 {
@@ -314,6 +321,13 @@ func UpdateSurvey(c *gin.Context) {
 		}
 		questionNumMap[question.SerialNum] = true
 		question.SerialNum = i + 1
+
+		//检测多选题目的最多选项数和最少选项数
+		if question.MaximumOption < question.MinimumOption {
+			c.Error(&gin.Error{Err: errors.New("多选最多选项数小于最少选项数"), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.ServerError)
+			return
+		}
 	}
 	//修改问卷
 	err = service.UpdateSurvey(data.ID, data.SurveyType, data.DailyLimit, data.Verify, data.Title, data.Desc, data.Img, data.Questions, ddlTime)

@@ -18,6 +18,7 @@ type Question struct {
 	Reg           string   `json:"reg"`                                                // 正则表达式
 	Options       []Option `json:"options"`                                            // 选项
 	MaximumOption uint     `json:"maximum_option"`                                     // 多选最多选项数 0为不限制
+	MinimumOption uint     `json:"minimum_option"`                                     // 多选最少选项数 0为不限制
 }
 
 type QuestionsList struct {
