@@ -6,17 +6,18 @@ import (
 )
 
 type Question struct {
-	ID           int      `json:"id"`
-	SerialNum    int      `json:"serial_num"`    // 题目序号
-	Subject      string   `json:"subject"`       // 问题
-	Description  string   `json:"description"`   // 问题描述
-	Img          string   `json:"img"`           // 图片
-	Required     bool     `json:"required"`      // 是否必填
-	Unique       bool     `json:"unique"`        // 是否唯一
-	OtherOption  bool     `json:"other_option"`  // 是否有其他选项
-	QuestionType int      `json:"question_type" binding:"required,oneof=1 2 3 4 5 6"` // 问题类型 1单选2多选3填空4简答5图片6文件
-	Reg          string   `json:"reg"`           // 正则表达式
-	Options      []Option `json:"options"`       // 选项
+	ID            int      `json:"id"`
+	SerialNum     int      `json:"serial_num"`                                         // 题目序号
+	Subject       string   `json:"subject"`                                            // 问题
+	Description   string   `json:"description"`                                        // 问题描述
+	Img           string   `json:"img"`                                                // 图片
+	Required      bool     `json:"required"`                                           // 是否必填
+	Unique        bool     `json:"unique"`                                             // 是否唯一
+	OtherOption   bool     `json:"other_option"`                                       // 是否有其他选项
+	QuestionType  int      `json:"question_type" binding:"required,oneof=1 2 3 4 5 6"` // 问题类型 1单选2多选3填空4简答5图片6文件
+	Reg           string   `json:"reg"`                                                // 正则表达式
+	Options       []Option `json:"options"`                                            // 选项
+	MaximumOption uint     `json:"maximum_option"`                                     // 多选最多选项数 0为不限制
 }
 
 type QuestionsList struct {
@@ -25,9 +26,9 @@ type QuestionsList struct {
 	Answer     string `json:"answer"`
 }
 
-func (d *Dao) CreateQuestion(ctx context.Context, question models.Question)(models.Question, error) {
+func (d *Dao) CreateQuestion(ctx context.Context, question models.Question) (models.Question, error) {
 	err := d.orm.WithContext(ctx).Create(&question).Error
-	return question,err
+	return question, err
 }
 
 func (d *Dao) GetQuestionsBySurveyID(ctx context.Context, surveyID int) ([]models.Question, error) {
