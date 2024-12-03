@@ -494,6 +494,7 @@ func createQuestionsAndOptions(questions []dao.Question, sid int) ([]string, err
 			o.QuestionID = q.ID
 			o.SerialNum = option.SerialNum
 			o.Img = option.Img
+			o.Description = option.Description
 			imgs = append(imgs, option.Img)
 			err := d.CreateOption(ctx, o)
 			if err != nil {
