@@ -17,7 +17,7 @@ var (
 	d   *dao.Dao
 )
 
-func ServiceInit(db *gorm.DB, mdb *mongo.Collection) {
+func ServiceInit(db *gorm.DB, mdb *mongo.Database) {
 	d = dao.New(db, mdb)
 }
 

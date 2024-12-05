@@ -26,7 +26,7 @@ type CreateSurveyData struct {
 	Status     int            `json:"status" binding:"required,oneof=1 2"`
 	Time       string         `json:"time"`
 	DailyLimit uint           `json:"day_limit"`   //问卷每日填写限制
-	SurveyType uint           `json:"survey_type"` //问卷类型 1:调研 2:投票
+	SurveyType uint           `json:"survey_type"` //问卷类型 0:调研 1:投票
 	Verify     bool           `json:"verify"`      //问卷是否需要统一验证
 	Questions  []dao.Question `json:"questions"`
 }
@@ -380,6 +380,12 @@ func DeleteSurvey(c *gin.Context) {
 	err = service.DeleteSurvey(data.ID)
 	if err != nil {
 		c.Error(&gin.Error{Err: errors.New("删除问卷失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
+	err = service.DeleteOauthRecord(data.ID)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("删除问卷答案失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
 	}

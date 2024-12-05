@@ -9,6 +9,7 @@ import (
 	"QA-System/internal/pkg/utils"
 	"QA-System/internal/service"
 	"errors"
+	"github.com/go-redis/redis/v8"
 	"gorm.io/gorm"
 	"sort"
 	"strconv"
@@ -19,14 +20,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type SubmitServeyData struct {
+type SubmitSurveyData struct {
 	ID            int                 `json:"id" binding:"required"`
 	StudentID     string              `json:"stu_id"`
 	QuestionsList []dao.QuestionsList `json:"questions_list"`
 }
 
 func SubmitSurvey(c *gin.Context) {
-	var data SubmitServeyData
+	var data SubmitSurveyData
 	err := c.ShouldBindJSON(&data)
 	if err != nil {
 		c.Error(&gin.Error{Err: errors.New("获取参数失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
@@ -116,7 +117,11 @@ func SubmitSurvey(c *gin.Context) {
 	}
 	// 创建并入队任务
 	task, err := queue.NewSubmitSurveyTask(data.ID, data.QuestionsList)
-	if err != nil {
+	if err == redis.Nil {
+		c.Error(&gin.Error{Err: errors.New("创建任务失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.StuIDRedisError)
+		return
+	} else if err != nil {
 		c.Error(&gin.Error{Err: errors.New("创建任务失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
@@ -252,28 +257,43 @@ func UploadFile(c *gin.Context) {
 }
 
 type OauthData struct {
-	StudenID string `json:"stu_id" binding:"required"`
-	Password string `json:"password" binding:"required"`
-	SurveyID int    `json:"survey_id" binding:"required"`
+	StudentID string `json:"stu_id" binding:"required"`
+	Password  string `json:"password" binding:"required"`
+	SurveyID  int    `json:"survey_id" binding:"required"`
 }
 
 func Oauth(c *gin.Context) {
 	var data OauthData
 	err := c.ShouldBindJSON(&data)
 	if err != nil {
-		c.Error(&gin.Error{Err: errors.New("获取参数失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		c.Error(&gin.Error{Err: errors.New("统一验证失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ParamError)
 		return
 	}
-	err = service.Oauth(data.StudenID, data.Password)
+	err = service.Oauth(data.StudentID, data.Password)
 	if err != nil {
-		c.Error(&gin.Error{Err: errors.New("认证失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		c.Error(&gin.Error{Err: errors.New("统一验证失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
 	}
-	err = service.SetUserLimit(c, data.StudenID, data.SurveyID, 0)
+	_, err = service.GetUserLimit(c, data.StudentID, data.SurveyID)
+	if err == nil {
+		utils.JsonSuccessResponse(c, nil)
+		return
+	} else if err != redis.Nil {
+		c.Error(&gin.Error{Err: errors.New("统一验证失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
+	err = service.SetUserLimit(c, data.StudentID, data.SurveyID, 0)
 	if err != nil {
-		c.Error(&gin.Error{Err: errors.New("创建用户投票次数失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		c.Error(&gin.Error{Err: errors.New("统一验证失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
+	err = service.CreateOauthRecord(data.StudentID, time.Now(), data.SurveyID)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("统一验证失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
 	}
@@ -312,9 +332,9 @@ func GetSurveyStatistics(c *gin.Context) {
 		utils.JsonErrorResponse(c, code.SurveyNotOpen)
 		return
 	}
-	if survey.Type != 2 {
+	if survey.Type != 1 {
 		c.Error(&gin.Error{Err: errors.New("问卷为调研问卷"), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.ServerError)
+		utils.JsonErrorResponse(c, code.SurveyTypeError)
 		return
 	}
 	answersheets, err := service.GetSurveyAnswersBySurveyID(data.ID)
@@ -374,6 +394,7 @@ func GetSurveyStatistics(c *gin.Context) {
 			}
 		}
 	}
+
 	response := make([]GetSurveyStatisticsResponse, 0, len(optionCounts))
 	for qid, options := range optionCounts {
 		q := questionMap[qid]
@@ -420,6 +441,6 @@ func GetSurveyStatistics(c *gin.Context) {
 			Options:      qOptions,
 		})
 
-		utils.JsonSuccessResponse(c, response)
 	}
+	utils.JsonSuccessResponse(c, gin.H{"statistics": response})
 }

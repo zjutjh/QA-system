@@ -102,7 +102,6 @@ func UpdateSurvey(id int, surveyType, limit uint, verify bool, title string, des
 	new_imgs := make([]string, 0)
 	//获取原有图片
 	oldQuestions, err := d.GetQuestionsBySurveyID(ctx, id)
-	fmt.Println(id)
 	if err != nil {
 		return err
 	}
@@ -118,7 +117,6 @@ func UpdateSurvey(id int, surveyType, limit uint, verify bool, title string, des
 		}
 		for _, oldOption := range oldOptions {
 			err = d.DeleteOption(ctx, oldOption.ID)
-			fmt.Println(oldOption.ID)
 			if err != nil {
 				return err
 			}
@@ -482,6 +480,8 @@ func createQuestionsAndOptions(questions []dao.Question, sid int) ([]string, err
 		q.Unique = question.Unique
 		q.OtherOption = question.OtherOption
 		q.QuestionType = question.QuestionType
+		q.MaximumOption = question.MaximumOption
+		q.MinimumOption = question.MinimumOption
 		q.Reg = question.Reg
 		imgs = append(imgs, question.Img)
 		q, err := d.CreateQuestion(ctx, q)
@@ -743,4 +743,8 @@ func UpdateAdminPassword(id int, password string) error {
 	password = utils.AesEncrypt(password)
 	err := d.UpdateUserPassword(ctx, id, password)
 	return err
+}
+
+func DeleteOauthRecord(sid int) error {
+	return d.DeleteRecordSheets(ctx, sid)
 }
