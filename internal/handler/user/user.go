@@ -257,28 +257,41 @@ func UploadFile(c *gin.Context) {
 }
 
 type OauthData struct {
-	StudenID string `json:"stu_id" binding:"required"`
-	Password string `json:"password" binding:"required"`
-	SurveyID int    `json:"survey_id" binding:"required"`
+	StudentID string `json:"stu_id" binding:"required"`
+	Password  string `json:"password" binding:"required"`
+	SurveyID  int    `json:"survey_id" binding:"required"`
 }
 
 func Oauth(c *gin.Context) {
 	var data OauthData
 	err := c.ShouldBindJSON(&data)
 	if err != nil {
-		c.Error(&gin.Error{Err: errors.New("获取参数失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		c.Error(&gin.Error{Err: errors.New("统一验证失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ParamError)
 		return
 	}
-	err = service.Oauth(data.StudenID, data.Password)
+	err = service.Oauth(data.StudentID, data.Password)
 	if err != nil {
-		c.Error(&gin.Error{Err: errors.New("认证失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		c.Error(&gin.Error{Err: errors.New("统一验证失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
 	}
-	err = service.SetUserLimit(c, data.StudenID, data.SurveyID, 0)
+	_, err = service.GetUserLimit(c, data.StudentID, data.SurveyID)
 	if err != nil {
-		c.Error(&gin.Error{Err: errors.New("创建用户投票次数失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		c.Error(&gin.Error{Err: errors.New("获取用户投票次数失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
+	if err == nil {
+		utils.JsonSuccessResponse(c, nil)
+	} else if err != redis.Nil {
+		c.Error(&gin.Error{Err: errors.New("统一验证失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
+	err = service.SetUserLimit(c, data.StudentID, data.SurveyID, 0)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("统一验证失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
 	}
