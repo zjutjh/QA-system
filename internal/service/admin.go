@@ -746,3 +746,7 @@ func UpdateAdminPassword(id int, password string) error {
 	err := d.UpdateUserPassword(ctx, id, password)
 	return err
 }
+
+func DeleteOauthRecord(sid int) error {
+	return d.DeleteRecordSheets(ctx, sid)
+}

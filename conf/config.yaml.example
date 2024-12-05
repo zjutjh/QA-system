@@ -28,8 +28,9 @@ mongodb:
   port: 27017
   user: 
   pass:
-  db: QA
-  collection: QA
+  db: qa
+  qa-collection: qa          # 回答集合
+  record-collection: record  # 记录集合
 
 url:
   host: "https://example.com"  # 项目地址

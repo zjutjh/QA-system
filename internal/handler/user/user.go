@@ -20,14 +20,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type SubmitServeyData struct {
+type SubmitSurveyData struct {
 	ID            int                 `json:"id" binding:"required"`
 	StudentID     string              `json:"stu_id"`
 	QuestionsList []dao.QuestionsList `json:"questions_list"`
 }
 
 func SubmitSurvey(c *gin.Context) {
-	var data SubmitServeyData
+	var data SubmitSurveyData
 	err := c.ShouldBindJSON(&data)
 	if err != nil {
 		c.Error(&gin.Error{Err: errors.New("获取参数失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
@@ -277,19 +277,21 @@ func Oauth(c *gin.Context) {
 		return
 	}
 	_, err = service.GetUserLimit(c, data.StudentID, data.SurveyID)
-	if err != nil {
-		c.Error(&gin.Error{Err: errors.New("获取用户投票次数失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.ServerError)
-		return
-	}
 	if err == nil {
 		utils.JsonSuccessResponse(c, nil)
+		return
 	} else if err != redis.Nil {
 		c.Error(&gin.Error{Err: errors.New("统一验证失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
 	}
 	err = service.SetUserLimit(c, data.StudentID, data.SurveyID, 0)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("统一验证失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
+	err = service.CreateOauthRecord(data.StudentID, time.Now(), data.SurveyID)
 	if err != nil {
 		c.Error(&gin.Error{Err: errors.New("统一验证失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)

@@ -1,8 +1,10 @@
 package dao
 
 import (
+	database "QA-System/internal/pkg/database/mongodb"
 	"QA-System/internal/pkg/log"
 	"context"
+	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -53,7 +55,7 @@ func (d *Dao) SaveAnswerSheet(ctx context.Context, answerSheet AnswerSheet, qids
 
 	if len(matchConditions) == 0 {
 		// 没有符合条件的记录，直接插入新记录
-		_, err := d.mongo.InsertOne(ctx, answerSheet)
+		_, err := d.mongo.Collection(database.QA).InsertOne(ctx, answerSheet)
 		if err != nil {
 			return err
 		}
@@ -67,11 +69,11 @@ func (d *Dao) SaveAnswerSheet(ctx context.Context, answerSheet AnswerSheet, qids
 	}
 
 	var result AnswerSheet
-	err := d.mongo.FindOne(ctx, filter).Decode(&result)
+	err := d.mongo.Collection(database.QA).FindOne(ctx, filter).Decode(&result)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			// 没有找到符合条件的记录，直接插入新记录
-			_, err := d.mongo.InsertOne(ctx, answerSheet)
+			_, err := d.mongo.Collection(database.QA).InsertOne(ctx, answerSheet)
 			if err != nil {
 				return err
 			}
@@ -85,7 +87,7 @@ func (d *Dao) SaveAnswerSheet(ctx context.Context, answerSheet AnswerSheet, qids
 	update := bson.M{
 		"$set": bson.M{"unique": false},
 	}
-	_, err = d.mongo.UpdateOne(ctx, filter, update)
+	_, err = d.mongo.Collection(database.QA).UpdateOne(ctx, filter, update)
 	if err != nil {
 		return err
 	}
@@ -98,7 +100,7 @@ func (d *Dao) SaveAnswerSheet(ctx context.Context, answerSheet AnswerSheet, qids
 		Answers:  answerSheet.Answers,
 	}
 
-	_, err = d.mongo.InsertOne(ctx, newAnswerSheet)
+	_, err = d.mongo.Collection(database.QA).InsertOne(ctx, newAnswerSheet)
 	if err != nil {
 		return err
 	}
@@ -118,6 +120,7 @@ func contains(arr []int, item int) bool {
 
 // GetAnswerSheetBySurveyID 根据问卷ID分页获取答卷
 func (d *Dao) GetAnswerSheetBySurveyID(ctx context.Context, surveyID int, pageNum int, pageSize int, text string, unique bool) ([]AnswerSheet, *int64, error) {
+	fmt.Println(d)
 	var answerSheets []AnswerSheet
 	filter := bson.M{"surveyid": surveyID}
 
@@ -136,7 +139,7 @@ func (d *Dao) GetAnswerSheetBySurveyID(ctx context.Context, surveyID int, pageNu
 	countOpts := options.Count()
 
 	// 执行总记录数查询
-	total, err := d.mongo.CountDocuments(ctx, countFilter, countOpts)
+	total, err := d.mongo.Collection(database.QA).CountDocuments(ctx, countFilter, countOpts)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -149,7 +152,7 @@ func (d *Dao) GetAnswerSheetBySurveyID(ctx context.Context, surveyID int, pageNu
 	}
 
 	// 执行分页查询
-	cur, err := d.mongo.Find(ctx, filter, opts)
+	cur, err := d.mongo.Collection(database.QA).Find(ctx, filter, opts)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -174,6 +177,6 @@ func (d *Dao) GetAnswerSheetBySurveyID(ctx context.Context, surveyID int, pageNu
 func (d *Dao) DeleteAnswerSheetBySurveyID(ctx context.Context, surveyID int) error {
 	filter := bson.M{"surveyid": surveyID}
 	// 删除所有满足条件的文档
-	_, err := d.mongo.DeleteMany(ctx, filter)
+	_, err := d.mongo.Collection(database.QA).DeleteMany(ctx, filter)
 	return err
 }

@@ -383,6 +383,12 @@ func DeleteSurvey(c *gin.Context) {
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
 	}
+	err = service.DeleteOauthRecord(data.ID)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("删除问卷答案失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
 	utils.JsonSuccessResponse(c, nil)
 }
 
