@@ -482,6 +482,8 @@ func createQuestionsAndOptions(questions []dao.Question, sid int) ([]string, err
 		q.Unique = question.Unique
 		q.OtherOption = question.OtherOption
 		q.QuestionType = question.QuestionType
+		q.MaximumOption = question.MaximumOption
+		q.MinimumOption = question.MinimumOption
 		q.Reg = question.Reg
 		imgs = append(imgs, question.Img)
 		q, err := d.CreateQuestion(ctx, q)

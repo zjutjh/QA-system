@@ -9,6 +9,7 @@ import (
 	"QA-System/internal/pkg/utils"
 	"QA-System/internal/service"
 	"errors"
+	"github.com/go-redis/redis/v8"
 	"gorm.io/gorm"
 	"sort"
 	"strconv"
@@ -116,7 +117,11 @@ func SubmitSurvey(c *gin.Context) {
 	}
 	// 创建并入队任务
 	task, err := queue.NewSubmitSurveyTask(data.ID, data.QuestionsList)
-	if err != nil {
+	if err == redis.Nil {
+		c.Error(&gin.Error{Err: errors.New("创建任务失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.StuIDRedisError)
+		return
+	} else if err != nil {
 		c.Error(&gin.Error{Err: errors.New("创建任务失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
