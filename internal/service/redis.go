@@ -25,7 +25,7 @@ func SetUserLimit(c context.Context, stu_id string, sid int, limit int) error {
 func InscUserLimit(c context.Context, stu_id string, sid int) error {
 	// 更新用户的对该问卷的访问次数
 	item := "survey_" + strconv.Itoa(sid) + "_stu_" + stu_id
-	err := redis.RedisClient.Decr(c, item).Err()
+	err := redis.RedisClient.Incr(c, item).Err()
 	return err
 
 }
