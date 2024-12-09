@@ -23,6 +23,9 @@ redis:
 aes:
   key:              # AES加密密钥, 16位
 
+jwt:
+  key:              # JWT加密密钥
+
 mongodb:
   host: "127.0.0.1"
   port: 27017
