@@ -4,8 +4,6 @@ import (
 	database "QA-System/internal/pkg/database/mongodb"
 	"QA-System/internal/pkg/log"
 	"context"
-	"fmt"
-
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -120,7 +118,6 @@ func contains(arr []int, item int) bool {
 
 // GetAnswerSheetBySurveyID 根据问卷ID分页获取答卷
 func (d *Dao) GetAnswerSheetBySurveyID(ctx context.Context, surveyID int, pageNum int, pageSize int, text string, unique bool) ([]AnswerSheet, *int64, error) {
-	fmt.Println(d)
 	var answerSheets []AnswerSheet
 	filter := bson.M{"surveyid": surveyID}
 

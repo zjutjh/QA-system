@@ -332,9 +332,9 @@ func GetSurveyStatistics(c *gin.Context) {
 		utils.JsonErrorResponse(c, code.SurveyNotOpen)
 		return
 	}
-	if survey.Type != 2 {
+	if survey.Type != 1 {
 		c.Error(&gin.Error{Err: errors.New("问卷为调研问卷"), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.ServerError)
+		utils.JsonErrorResponse(c, code.SurveyTypeError)
 		return
 	}
 	answersheets, err := service.GetSurveyAnswersBySurveyID(data.ID)
@@ -394,6 +394,7 @@ func GetSurveyStatistics(c *gin.Context) {
 			}
 		}
 	}
+
 	response := make([]GetSurveyStatisticsResponse, 0, len(optionCounts))
 	for qid, options := range optionCounts {
 		q := questionMap[qid]
@@ -440,6 +441,6 @@ func GetSurveyStatistics(c *gin.Context) {
 			Options:      qOptions,
 		})
 
-		utils.JsonSuccessResponse(c, response)
 	}
+	utils.JsonSuccessResponse(c, gin.H{"statistics": response})
 }

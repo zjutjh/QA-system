@@ -26,7 +26,7 @@ type CreateSurveyData struct {
 	Status     int            `json:"status" binding:"required,oneof=1 2"`
 	Time       string         `json:"time"`
 	DailyLimit uint           `json:"day_limit"`   //问卷每日填写限制
-	SurveyType uint           `json:"survey_type"` //问卷类型 1:调研 2:投票
+	SurveyType uint           `json:"survey_type"` //问卷类型 0:调研 1:投票
 	Verify     bool           `json:"verify"`      //问卷是否需要统一验证
 	Questions  []dao.Question `json:"questions"`
 }

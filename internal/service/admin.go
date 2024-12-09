@@ -102,7 +102,6 @@ func UpdateSurvey(id int, surveyType, limit uint, verify bool, title string, des
 	new_imgs := make([]string, 0)
 	//获取原有图片
 	oldQuestions, err := d.GetQuestionsBySurveyID(ctx, id)
-	fmt.Println(id)
 	if err != nil {
 		return err
 	}
@@ -118,7 +117,6 @@ func UpdateSurvey(id int, surveyType, limit uint, verify bool, title string, des
 		}
 		for _, oldOption := range oldOptions {
 			err = d.DeleteOption(ctx, oldOption.ID)
-			fmt.Println(oldOption.ID)
 			if err != nil {
 				return err
 			}
