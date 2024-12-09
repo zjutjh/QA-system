@@ -34,23 +34,21 @@ func SubmitSurvey(c *gin.Context) {
 		utils.JsonErrorResponse(c, code.ParamError)
 		return
 	}
-	sid, stuId, err := utils.ParseJWT(data.Token)
-	if err != nil {
-		c.Error(&gin.Error{Err: errors.New("获取参数失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.ServerError)
-		return
-	}
-	if sid != data.ID {
-		c.Error(&gin.Error{Err: errors.New("问卷ID和token不匹配"), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.ServerError)
-		return
-	}
 	// 判断问卷问题和答卷问题数目是否一致
 	survey, err := service.GetSurveyByID(data.ID)
 	if err != nil {
 		c.Error(&gin.Error{Err: errors.New("获取问卷失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
+	}
+	var stuId string
+	if survey.Verify == true {
+		stuId, err = utils.ParseJWT(data.Token)
+		if err != nil {
+			c.Error(&gin.Error{Err: errors.New("获取参数失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.ServerError)
+			return
+		}
 	}
 	questions, err := service.GetQuestionsBySurveyID(survey.ID)
 	if err != nil {
@@ -318,9 +316,9 @@ func Oauth(c *gin.Context) {
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
 	}
-	token := utils.NewJWT(data.SurveyID, data.StudentID)
-	if token != "" {
-		c.Error(&gin.Error{Err: errors.New("统一验证失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+	token := utils.NewJWT(data.StudentID)
+	if token == "" {
+		c.Error(&gin.Error{Err: errors.New("统一验证失败原因: token生成失败"), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
 	}
