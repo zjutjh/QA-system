@@ -56,6 +56,11 @@ func CreateSurvey(c *gin.Context) {
 	// 检查问卷每个题目的序号没有重复且按照顺序递增
 	questionNumMap := make(map[int]bool)
 	for i, question := range data.Questions {
+		if data.SurveyType == 2 && (question.QuestionType != 2 && question.Required != true) {
+			c.Error(&gin.Error{Err: errors.New("投票题目只能为多选必填题"), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.ServerError)
+			return
+		}
 		if questionNumMap[question.SerialNum] {
 			c.Error(&gin.Error{Err: errors.New("题目序号" + strconv.Itoa(question.SerialNum) + "重复"), Type: gin.ErrorTypeAny})
 			utils.JsonErrorResponse(c, code.ServerError)
