@@ -183,6 +183,13 @@ func SubmitSurvey(c *gin.Context) {
 			utils.JsonErrorResponse(c, code.ServerError)
 			return
 		}
+	} else if survey.Verify == true {
+		err = service.CreateOauthRecord(stuId, time.Now(), data.ID)
+		if err != nil {
+			c.Error(&gin.Error{Err: errors.New("统一验证失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.ServerError)
+			return
+		}
 	}
 	utils.JsonSuccessResponse(c, nil)
 }
@@ -305,7 +312,6 @@ func UploadFile(c *gin.Context) {
 type OauthData struct {
 	StudentID string `json:"stu_id" binding:"required"`
 	Password  string `json:"password" binding:"required"`
-	SurveyID  int    `json:"survey_id" binding:"required"`
 }
 
 func Oauth(c *gin.Context) {
@@ -325,12 +331,6 @@ func Oauth(c *gin.Context) {
 	token := utils.NewJWT(data.StudentID)
 	if token == "" {
 		c.Error(&gin.Error{Err: errors.New("统一验证失败原因: token生成失败"), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.ServerError)
-		return
-	}
-	err = service.CreateOauthRecord(data.StudentID, time.Now(), data.SurveyID)
-	if err != nil {
-		c.Error(&gin.Error{Err: errors.New("统一验证失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
 	}
