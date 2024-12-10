@@ -60,6 +60,11 @@ func CreateSurvey(c *gin.Context) {
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
 	}
+	if startTime.After(ddlTime) {
+		c.Error(&gin.Error{Err: errors.New("开始时间晚于截止时间"), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.SurveyError)
+		return
+	}
 	// 检查问卷每个题目的序号没有重复且按照顺序递增
 	questionNumMap := make(map[int]bool)
 	for i, question := range data.Questions {
@@ -308,7 +313,7 @@ func UpdateSurvey(c *gin.Context) {
 		//判断问卷状态
 		if survey.Status != 1 {
 			c.Error(&gin.Error{Err: errors.New("问卷状态不为未发布"), Type: gin.ErrorTypeAny})
-			utils.JsonErrorResponse(c, code.StatusRepeatError)
+			utils.JsonErrorResponse(c, code.StatusOpenError)
 			return
 		}
 		// 判断问卷的填写数量是否为零
@@ -335,6 +340,11 @@ func UpdateSurvey(c *gin.Context) {
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
 	}
+	if startTime.After(ddlTime) {
+		c.Error(&gin.Error{Err: errors.New("开始时间晚于截止时间"), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.SurveyError)
+		return
+	}
 	// 检查问卷每个题目的序号没有重复且按照顺序递增
 	questionNumMap := make(map[int]bool)
 	for i, question := range data.Questions {
@@ -354,7 +364,19 @@ func UpdateSurvey(c *gin.Context) {
 		//检测多选题目的最多选项数和最少选项数
 		if question.MaximumOption < question.MinimumOption {
 			c.Error(&gin.Error{Err: errors.New("多选最多选项数小于最少选项数"), Type: gin.ErrorTypeAny})
-			utils.JsonErrorResponse(c, code.ServerError)
+			utils.JsonErrorResponse(c, code.OptionNumError)
+			return
+		}
+		// 检查多选选项和最少选项数是否符合要求
+		if len(question.Options) < int(question.MinimumOption) {
+			c.Error(&gin.Error{Err: errors.New("选项数量小于最少选项数"), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.OptionNumError)
+			return
+		}
+		// 检查最多选项数是否符合要求
+		if int(question.MaximumOption) <= 0 {
+			c.Error(&gin.Error{Err: errors.New("最多选项数小于等于0"), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.OptionNumError)
 			return
 		}
 	}

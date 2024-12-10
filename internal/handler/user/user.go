@@ -234,6 +234,11 @@ func GetSurvey(c *gin.Context) {
 		utils.JsonErrorResponse(c, code.SurveyNotOpen)
 		return
 	}
+	if survey.StartTime.IsZero() && survey.StartTime.After(time.Now()) {
+		c.Error(&gin.Error{Err: errors.New("问卷未开放"), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.SurveyNotOpen)
+		return
+	}
 	// 获取相应的问题
 	questions, err := service.GetQuestionsBySurveyID(survey.ID)
 	if err != nil {
