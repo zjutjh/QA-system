@@ -69,8 +69,6 @@ func New() Client {
 		case 409:
 			return false
 		default:
-			// 其他情况不重试
-			log.Logger.Error("Business error with code %d: %s. Retrying...", zap.Int("code", resp.Code), zap.String("msg", resp.Msg))
 			return true
 		}
 	})

@@ -339,11 +339,7 @@ func Oauth(c *gin.Context) {
 		if apiErr, ok := err.(*code.Error); ok {
 			utils.JsonErrorResponse(c, apiErr)
 		} else {
-			if time.Now().Hour() < 6 && time.Now().Hour() >= 0 {
-				utils.JsonErrorResponse(c, code.OauthTimeError)
-			} else {
-				utils.JsonErrorResponse(c, code.ServerError)
-			}
+			utils.JsonErrorResponse(c, code.ServerError)
 		}
 		return
 	}
