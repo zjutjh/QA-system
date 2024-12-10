@@ -228,6 +228,12 @@ func GetSurvey(c *gin.Context) {
 		utils.JsonErrorResponse(c, code.TimeBeyondError)
 		return
 	}
+	// 判断问卷是否开放
+	if survey.Status != 2 {
+		c.Error(&gin.Error{Err: errors.New("问卷未开放"), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.SurveyNotOpen)
+		return
+	}
 	// 获取相应的问题
 	questions, err := service.GetQuestionsBySurveyID(survey.ID)
 	if err != nil {
@@ -373,11 +379,6 @@ func GetSurveyStatistics(c *gin.Context) {
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
 	}
-	if survey.Status != 2 {
-		c.Error(&gin.Error{Err: errors.New("问卷未开放"), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.SurveyNotOpen)
-		return
-	}
 	if survey.Type != 1 {
 		c.Error(&gin.Error{Err: errors.New("问卷为调研问卷"), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.SurveyTypeError)
@@ -518,7 +519,6 @@ func GetSurveyStatistics(c *gin.Context) {
 			count := options[oSerialNum]
 			op, err := service.GetOptionByQIDAndSerialNum(q.ID, oSerialNum)
 			if err != nil {
-				c.Error(&gin.Error{Err: errors.New("获取选项信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 				utils.JsonErrorResponse(c, code.ServerError)
 				return
 			}

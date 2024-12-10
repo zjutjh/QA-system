@@ -93,6 +93,12 @@ func CreateSurvey(c *gin.Context) {
 			utils.JsonErrorResponse(c, code.OptionNumError)
 			return
 		}
+		// 检查最多选项数是否符合要求
+		if int(question.MaximumOption) <= 0 {
+			c.Error(&gin.Error{Err: errors.New("最多选项数小于等于0"), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.OptionNumError)
+			return
+		}
 	}
 	//检测问卷是否填写完整
 	if data.Status == 2 {
@@ -298,9 +304,7 @@ func UpdateSurvey(c *gin.Context) {
 		return
 	}
 	//判断用户权限
-	if user.AdminType == 2 {
-		// 	超管可以直接修改问卷
-	} else if user.AdminType == 1 && survey.UserID == user.ID {
+	if user.AdminType == 2 || user.AdminType == 1 && survey.UserID == user.ID {
 		//判断问卷状态
 		if survey.Status != 1 {
 			c.Error(&gin.Error{Err: errors.New("问卷状态不为未发布"), Type: gin.ErrorTypeAny})
