@@ -60,8 +60,10 @@ func handleLoginErrors(num int) error {
 	switch num {
 	case 404:
 		return code.UserNotFound
-	case 405:
+	case 409:
 		return code.NoThatPasswordOrWrong
+	case 408:
+		return code.HttpTimeout
 	case 200:
 		return nil
 	default:

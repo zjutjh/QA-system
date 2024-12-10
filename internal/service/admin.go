@@ -71,7 +71,7 @@ func CheckPermission(id int, surveyID int) error {
 	return err
 }
 
-func CreateSurvey(id int, title string, desc string, img string, questions []dao.Question, status int, surveyType, limit uint, verify bool, time time.Time) error {
+func CreateSurvey(id int, title string, desc string, img string, questions []dao.Question, status int, surveyType, limit uint, verify bool, time, startTime time.Time) error {
 	var survey models.Survey
 	survey.UserID = id
 	survey.Title = title
@@ -82,6 +82,7 @@ func CreateSurvey(id int, title string, desc string, img string, questions []dao
 	survey.Type = surveyType
 	survey.DailyLimit = limit
 	survey.Verify = verify
+	survey.StartTime = startTime
 	survey, err := d.CreateSurvey(ctx, survey)
 	if err != nil {
 		return err
@@ -95,7 +96,7 @@ func UpdateSurveyStatus(id int, status int) error {
 	return err
 }
 
-func UpdateSurvey(id int, surveyType, limit uint, verify bool, title string, desc string, img string, questions []dao.Question, time time.Time) error {
+func UpdateSurvey(id int, surveyType, limit uint, verify bool, title string, desc string, img string, questions []dao.Question, time, startTime time.Time) error {
 	//遍历原有问题，删除对应选项
 	var oldQuestions []models.Question
 	var old_imgs []string
@@ -127,7 +128,7 @@ func UpdateSurvey(id int, surveyType, limit uint, verify bool, title string, des
 		}
 	}
 	//修改问卷信息
-	err = d.UpdateSurvey(ctx, id, surveyType, limit, verify, title, desc, img, time)
+	err = d.UpdateSurvey(ctx, id, surveyType, limit, verify, title, desc, img, time, startTime)
 	if err != nil {
 		return err
 	}

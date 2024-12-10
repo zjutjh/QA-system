@@ -23,8 +23,8 @@ func (d *Dao) GetOptionsByQuestionID(ctx context.Context, questionID int) ([]mod
 	return options, err
 }
 
-func (d *Dao) DeleteOption(ctx context.Context, optionID int) error {
-	err := d.orm.WithContext(ctx).Where("id = ?", optionID).Delete(&models.Option{}).Error
+func (d *Dao) DeleteOption(ctx context.Context, questionID int) error {
+	err := d.orm.WithContext(ctx).Where("question_id = ?", questionID).Delete(&models.Option{}).Error
 	return err
 }
 

@@ -67,6 +67,11 @@ func SubmitSurvey(c *gin.Context) {
 		utils.JsonErrorResponse(c, code.TimeBeyondError)
 		return
 	}
+	if !survey.StartTime.IsZero() && survey.StartTime.After(time.Now()) {
+		c.Error(&gin.Error{Err: errors.New("填写时间未到"), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.TimeBeyondError)
+		return
+	}
 	// 判断问卷是否开放
 	if survey.Status != 2 {
 		c.Error(&gin.Error{Err: errors.New("问卷未开放"), Type: gin.ErrorTypeAny})
@@ -178,6 +183,13 @@ func SubmitSurvey(c *gin.Context) {
 			utils.JsonErrorResponse(c, code.ServerError)
 			return
 		}
+	} else if survey.Verify == true {
+		err = service.CreateOauthRecord(stuId, time.Now(), data.ID)
+		if err != nil {
+			c.Error(&gin.Error{Err: errors.New("统一验证失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.ServerError)
+			return
+		}
 	}
 	utils.JsonSuccessResponse(c, nil)
 }
@@ -268,6 +280,7 @@ func GetSurvey(c *gin.Context) {
 		"daily_limit": survey.DailyLimit,
 		"verify":      survey.Verify,
 		"survey_type": survey.Type,
+		"start_time":  survey.StartTime,
 		"questions":   questionsResponse,
 	}
 
@@ -299,7 +312,6 @@ func UploadFile(c *gin.Context) {
 type OauthData struct {
 	StudentID string `json:"stu_id" binding:"required"`
 	Password  string `json:"password" binding:"required"`
-	SurveyID  int    `json:"survey_id" binding:"required"`
 }
 
 func Oauth(c *gin.Context) {
@@ -313,18 +325,20 @@ func Oauth(c *gin.Context) {
 	err = service.Oauth(data.StudentID, data.Password)
 	if err != nil {
 		c.Error(&gin.Error{Err: errors.New("统一验证失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.ServerError)
+		if apiErr, ok := err.(*code.Error); ok {
+			utils.JsonErrorResponse(c, apiErr)
+		} else {
+			if time.Now().Hour() < 6 && time.Now().Hour() >= 0 {
+				utils.JsonErrorResponse(c, code.OauthTimeError)
+			} else {
+				utils.JsonErrorResponse(c, code.ServerError)
+			}
+		}
 		return
 	}
 	token := utils.NewJWT(data.StudentID)
 	if token == "" {
 		c.Error(&gin.Error{Err: errors.New("统一验证失败原因: token生成失败"), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.ServerError)
-		return
-	}
-	err = service.CreateOauthRecord(data.StudentID, time.Now(), data.SurveyID)
-	if err != nil {
-		c.Error(&gin.Error{Err: errors.New("统一验证失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
 	}
