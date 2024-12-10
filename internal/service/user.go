@@ -24,9 +24,9 @@ func GetSurveyByID(id int) (*models.Survey, error) {
 	return survey, err
 }
 
-func GetQuestionsBySurveyID(id int) ([]models.Question, error) {
+func GetQuestionsBySurveyID(sid int) ([]models.Question, error) {
 	var questions []models.Question
-	questions, err := d.GetQuestionsBySurveyID(ctx, id)
+	questions, err := d.GetQuestionsBySurveyID(ctx, sid)
 	return questions, err
 }
 

@@ -228,6 +228,17 @@ func GetSurvey(c *gin.Context) {
 		utils.JsonErrorResponse(c, code.TimeBeyondError)
 		return
 	}
+	// 判断问卷是否开放
+	if survey.Status != 2 {
+		c.Error(&gin.Error{Err: errors.New("问卷未开放"), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.SurveyNotOpen)
+		return
+	}
+	if survey.StartTime.IsZero() && survey.StartTime.After(time.Now()) {
+		c.Error(&gin.Error{Err: errors.New("问卷未开放"), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.SurveyNotOpen)
+		return
+	}
 	// 获取相应的问题
 	questions, err := service.GetQuestionsBySurveyID(survey.ID)
 	if err != nil {
@@ -328,11 +339,7 @@ func Oauth(c *gin.Context) {
 		if apiErr, ok := err.(*code.Error); ok {
 			utils.JsonErrorResponse(c, apiErr)
 		} else {
-			if time.Now().Hour() < 6 && time.Now().Hour() >= 0 {
-				utils.JsonErrorResponse(c, code.OauthTimeError)
-			} else {
-				utils.JsonErrorResponse(c, code.ServerError)
-			}
+			utils.JsonErrorResponse(c, code.ServerError)
 		}
 		return
 	}
@@ -371,11 +378,6 @@ func GetSurveyStatistics(c *gin.Context) {
 	if err != nil {
 		c.Error(&gin.Error{Err: errors.New("获取问卷失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)
-		return
-	}
-	if survey.Status != 2 {
-		c.Error(&gin.Error{Err: errors.New("问卷未开放"), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.SurveyNotOpen)
 		return
 	}
 	if survey.Type != 1 {
@@ -518,7 +520,6 @@ func GetSurveyStatistics(c *gin.Context) {
 			count := options[oSerialNum]
 			op, err := service.GetOptionByQIDAndSerialNum(q.ID, oSerialNum)
 			if err != nil {
-				c.Error(&gin.Error{Err: errors.New("获取选项信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 				utils.JsonErrorResponse(c, code.ServerError)
 				return
 			}

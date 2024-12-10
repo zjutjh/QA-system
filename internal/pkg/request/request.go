@@ -24,9 +24,8 @@ func New() Client {
 			SetJSONMarshaler(jsoniter.ConfigCompatibleWithStandardLibrary.Marshal).
 			SetJSONUnmarshaler(jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal).
 			// 配置重试机制
-			SetRetryCount(3).                      // 设置重试次数
-			SetRetryWaitTime(2 * time.Second).     // 每次重试间隔时间
-			SetRetryMaxWaitTime(10 * time.Second), // 最大重试等待时间,
+			SetRetryCount(3).                     // 设置重试次数
+			SetRetryMaxWaitTime(2 * time.Second), // 最大重试等待时间,
 	}
 	// 添加重试条件：仅对特定的 HTTP 状态码或错误类型重试
 	s.Client.AddRetryCondition(func(r *resty.Response, err error) bool {
@@ -67,9 +66,9 @@ func New() Client {
 		switch resp.Code {
 		case 200:
 			return false
+		case 409:
+			return false
 		default:
-			// 其他情况不重试
-			log.Logger.Error("Business error with code %d: %s. Retrying...", zap.Int("code", resp.Code), zap.String("msg", resp.Msg))
 			return true
 		}
 	})

@@ -5,6 +5,7 @@ import (
 	"QA-System/internal/pkg/code"
 	"QA-System/internal/pkg/request"
 	"net/url"
+	"time"
 )
 
 // UserCenterResponse 用户中心响应结构体
@@ -64,6 +65,12 @@ func handleLoginErrors(num int) error {
 		return code.NoThatPasswordOrWrong
 	case 408:
 		return code.HttpTimeout
+	case 410:
+		if time.Now().Hour() < 6 && time.Now().Hour() >= 0 {
+			return code.OauthTimeError
+		} else {
+			return code.ServerError
+		}
 	case 200:
 		return nil
 	default:
