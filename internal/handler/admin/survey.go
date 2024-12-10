@@ -24,6 +24,7 @@ type CreateSurveyData struct {
 	Desc       string         `json:"desc" `
 	Img        string         `json:"img" `
 	Status     int            `json:"status" binding:"required,oneof=1 2"`
+	StartTime  string         `json:"start_time"`
 	Time       string         `json:"time"`
 	DailyLimit uint           `json:"day_limit"`   //问卷每日填写限制
 	SurveyType uint           `json:"survey_type"` //问卷类型 0:调研 1:投票
@@ -50,6 +51,12 @@ func CreateSurvey(c *gin.Context) {
 	ddlTime, err := time.Parse(time.RFC3339, data.Time)
 	if err != nil {
 		c.Error(&gin.Error{Err: errors.New("时间解析失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
+	startTime, err := time.Parse(time.RFC3339, data.StartTime)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("开始时间解析失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
 	}
@@ -131,7 +138,7 @@ func CreateSurvey(c *gin.Context) {
 		}
 	}
 	//创建问卷
-	err = service.CreateSurvey(user.ID, data.Title, data.Desc, data.Img, data.Questions, data.Status, data.SurveyType, data.DailyLimit, data.Verify, ddlTime)
+	err = service.CreateSurvey(user.ID, data.Title, data.Desc, data.Img, data.Questions, data.Status, data.SurveyType, data.DailyLimit, data.Verify, ddlTime, startTime)
 	if err != nil {
 		c.Error(&gin.Error{Err: errors.New("创建问卷失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)
@@ -255,6 +262,7 @@ type UpdateSurveyData struct {
 	Desc       string         `json:"desc" `
 	Img        string         `json:"img" `
 	Time       string         `json:"time"`
+	StartTime  string         `json:"start_time"`
 	DailyLimit uint           `json:"day_limit"`   //问卷每日填写限制
 	SurveyType uint           `json:"survey_type"` //问卷类型 1:调研 2:投票
 	Verify     bool           `json:"verify"`      //问卷是否需要统一验证
@@ -317,6 +325,12 @@ func UpdateSurvey(c *gin.Context) {
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
 	}
+	startTime, err := time.Parse(time.RFC3339, data.StartTime)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("开始时间解析失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
 	// 检查问卷每个题目的序号没有重复且按照顺序递增
 	questionNumMap := make(map[int]bool)
 	for i, question := range data.Questions {
@@ -341,7 +355,7 @@ func UpdateSurvey(c *gin.Context) {
 		}
 	}
 	//修改问卷
-	err = service.UpdateSurvey(data.ID, data.SurveyType, data.DailyLimit, data.Verify, data.Title, data.Desc, data.Img, data.Questions, ddlTime)
+	err = service.UpdateSurvey(data.ID, data.SurveyType, data.DailyLimit, data.Verify, data.Title, data.Desc, data.Img, data.Questions, ddlTime, startTime)
 	if err != nil {
 		c.Error(&gin.Error{Err: errors.New("修改问卷失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)
@@ -617,6 +631,7 @@ func GetSurvey(c *gin.Context) {
 		"survey_type": survey.Type,
 		"verify":      survey.Verify,
 		"day_limit":   survey.DailyLimit,
+		"start_time":  survey.StartTime,
 		"questions":   questionsResponse,
 	}
 

@@ -18,8 +18,8 @@ func (d *Dao) UpdateSurveyStatus(ctx context.Context, surveyID int, status int) 
 	return err
 }
 
-func (d *Dao) UpdateSurvey(ctx context.Context, id int, surveyType, limit uint, verify bool, title, desc, img string, deadline time.Time) error {
-	err := d.orm.WithContext(ctx).Model(&models.Survey{}).Where("id = ?", id).Updates(models.Survey{Title: title, Desc: desc, Img: img, Deadline: deadline, DailyLimit: limit, Verify: verify, Type: surveyType}).Error
+func (d *Dao) UpdateSurvey(ctx context.Context, id int, surveyType, limit uint, verify bool, title, desc, img string, deadline, startTime time.Time) error {
+	err := d.orm.WithContext(ctx).Model(&models.Survey{}).Where("id = ?", id).Updates(models.Survey{Title: title, Desc: desc, Img: img, Deadline: deadline, DailyLimit: limit, Verify: verify, Type: surveyType, StartTime: startTime}).Error
 	return err
 }
 
