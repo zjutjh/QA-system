@@ -325,7 +325,15 @@ func Oauth(c *gin.Context) {
 	err = service.Oauth(data.StudentID, data.Password)
 	if err != nil {
 		c.Error(&gin.Error{Err: errors.New("统一验证失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.OauthError)
+		if apiErr, ok := err.(*code.Error); ok {
+			utils.JsonErrorResponse(c, apiErr)
+		} else {
+			if time.Now().Hour() < 6 && time.Now().Hour() >= 0 {
+				utils.JsonErrorResponse(c, code.OauthTimeError)
+			} else {
+				utils.JsonErrorResponse(c, code.ServerError)
+			}
+		}
 		return
 	}
 	token := utils.NewJWT(data.StudentID)
