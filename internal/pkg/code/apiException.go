@@ -43,6 +43,7 @@ var (
 	OptionNumError        = NewError(http.StatusInternalServerError, 200525, "选项设置不符合要求")
 	StuIDRedisError       = NewError(http.StatusInternalServerError, 200526, "未统一验证，请重新进入并进行统一验证")
 	SurveyTypeError       = NewError(http.StatusInternalServerError, 200527, "问卷类型错误")
+	OauthError            = NewError(http.StatusInternalServerError, 200528, "统一登录失败，请重新尝试")
 	NotInit               = NewError(http.StatusNotFound, 200404, http.StatusText(http.StatusNotFound))
 	NotFound              = NewError(http.StatusNotFound, 200404, http.StatusText(http.StatusNotFound))
 	Unknown               = NewError(http.StatusInternalServerError, 300500, "系统异常，请稍后重试!")
