@@ -20,12 +20,16 @@ import (
 
 // 新建问卷
 type CreateSurveyData struct {
-	Title     string         `json:"title"`
-	Desc      string         `json:"desc" `
-	Img       string         `json:"img" `
-	Status    int            `json:"status" binding:"required,oneof=1 2"`
-	Time      string         `json:"time"`
-	Questions []dao.Question `json:"questions"`
+	Title      string         `json:"title"`
+	Desc       string         `json:"desc" `
+	Img        string         `json:"img" `
+	Status     int            `json:"status" binding:"required,oneof=1 2"`
+	StartTime  string         `json:"start_time"`
+	Time       string         `json:"time"`
+	DailyLimit uint           `json:"day_limit"`   //问卷每日填写限制
+	SurveyType uint           `json:"survey_type"` //问卷类型 0:调研 1:投票
+	Verify     bool           `json:"verify"`      //问卷是否需要统一验证
+	Questions  []dao.Question `json:"questions"`
 }
 
 func CreateSurvey(c *gin.Context) {
@@ -50,9 +54,20 @@ func CreateSurvey(c *gin.Context) {
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
 	}
+	startTime, err := time.Parse(time.RFC3339, data.StartTime)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("开始时间解析失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
 	// 检查问卷每个题目的序号没有重复且按照顺序递增
 	questionNumMap := make(map[int]bool)
 	for i, question := range data.Questions {
+		if data.SurveyType == 2 && (question.QuestionType != 2 && question.Required != true) {
+			c.Error(&gin.Error{Err: errors.New("投票题目只能为多选必填题"), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.ServerError)
+			return
+		}
 		if questionNumMap[question.SerialNum] {
 			c.Error(&gin.Error{Err: errors.New("题目序号" + strconv.Itoa(question.SerialNum) + "重复"), Type: gin.ErrorTypeAny})
 			utils.JsonErrorResponse(c, code.ServerError)
@@ -65,6 +80,25 @@ func CreateSurvey(c *gin.Context) {
 		}
 		questionNumMap[question.SerialNum] = true
 		question.SerialNum = i + 1
+
+		//检测多选题目的最多选项数和最少选项数
+		if question.MaximumOption < question.MinimumOption {
+			c.Error(&gin.Error{Err: errors.New("多选最多选项数小于最少选项数"), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.OptionNumError)
+			return
+		}
+		// 检查多选选项和最少选项数是否符合要求
+		if len(question.Options) < int(question.MinimumOption) {
+			c.Error(&gin.Error{Err: errors.New("选项数量小于最少选项数"), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.OptionNumError)
+			return
+		}
+		// 检查最多选项数是否符合要求
+		if int(question.MaximumOption) <= 0 {
+			c.Error(&gin.Error{Err: errors.New("最多选项数小于等于0"), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.OptionNumError)
+			return
+		}
 	}
 	//检测问卷是否填写完整
 	if data.Status == 2 {
@@ -110,7 +144,7 @@ func CreateSurvey(c *gin.Context) {
 		}
 	}
 	//创建问卷
-	err = service.CreateSurvey(user.ID, data.Title, data.Desc, data.Img, data.Questions, data.Status, ddlTime)
+	err = service.CreateSurvey(user.ID, data.Title, data.Desc, data.Img, data.Questions, data.Status, data.SurveyType, data.DailyLimit, data.Verify, ddlTime, startTime)
 	if err != nil {
 		c.Error(&gin.Error{Err: errors.New("创建问卷失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)
@@ -229,12 +263,16 @@ func UpdateSurveyStatus(c *gin.Context) {
 }
 
 type UpdateSurveyData struct {
-	ID        int            `json:"id" binding:"required"`
-	Title     string         `json:"title"`
-	Desc      string         `json:"desc" `
-	Img       string         `json:"img" `
-	Time      string         `json:"time"`
-	Questions []dao.Question `json:"questions"`
+	ID         int            `json:"id" binding:"required"`
+	Title      string         `json:"title"`
+	Desc       string         `json:"desc" `
+	Img        string         `json:"img" `
+	Time       string         `json:"time"`
+	StartTime  string         `json:"start_time"`
+	DailyLimit uint           `json:"day_limit"`   //问卷每日填写限制
+	SurveyType uint           `json:"survey_type"` //问卷类型 1:调研 2:投票
+	Verify     bool           `json:"verify"`      //问卷是否需要统一验证
+	Questions  []dao.Question `json:"questions"`
 }
 
 func UpdateSurvey(c *gin.Context) {
@@ -266,9 +304,7 @@ func UpdateSurvey(c *gin.Context) {
 		return
 	}
 	//判断用户权限
-	if user.AdminType == 2 {
-		// 	超管可以直接修改问卷
-	} else if user.AdminType == 1 && survey.UserID == user.ID {
+	if user.AdminType == 2 || user.AdminType == 1 && survey.UserID == user.ID {
 		//判断问卷状态
 		if survey.Status != 1 {
 			c.Error(&gin.Error{Err: errors.New("问卷状态不为未发布"), Type: gin.ErrorTypeAny})
@@ -293,6 +329,12 @@ func UpdateSurvey(c *gin.Context) {
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
 	}
+	startTime, err := time.Parse(time.RFC3339, data.StartTime)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("开始时间解析失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
 	// 检查问卷每个题目的序号没有重复且按照顺序递增
 	questionNumMap := make(map[int]bool)
 	for i, question := range data.Questions {
@@ -308,9 +350,16 @@ func UpdateSurvey(c *gin.Context) {
 		}
 		questionNumMap[question.SerialNum] = true
 		question.SerialNum = i + 1
+
+		//检测多选题目的最多选项数和最少选项数
+		if question.MaximumOption < question.MinimumOption {
+			c.Error(&gin.Error{Err: errors.New("多选最多选项数小于最少选项数"), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.ServerError)
+			return
+		}
 	}
 	//修改问卷
-	err = service.UpdateSurvey(data.ID, data.Title, data.Desc, data.Img, data.Questions, ddlTime)
+	err = service.UpdateSurvey(data.ID, data.SurveyType, data.DailyLimit, data.Verify, data.Title, data.Desc, data.Img, data.Questions, ddlTime, startTime)
 	if err != nil {
 		c.Error(&gin.Error{Err: errors.New("修改问卷失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)
@@ -360,6 +409,12 @@ func DeleteSurvey(c *gin.Context) {
 	err = service.DeleteSurvey(data.ID)
 	if err != nil {
 		c.Error(&gin.Error{Err: errors.New("删除问卷失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
+	err = service.DeleteOauthRecord(data.ID)
+	if err != nil {
+		c.Error(&gin.Error{Err: errors.New("删除问卷答案失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)
 		return
 	}
@@ -546,34 +601,42 @@ func GetSurvey(c *gin.Context) {
 		optionsResponse := make([]map[string]interface{}, 0)
 		for _, option := range options {
 			optionResponse := map[string]interface{}{
-				"img":        option.Img,
-				"content":    option.Content,
-				"serial_num": option.SerialNum,
+				"img":         option.Img,
+				"content":     option.Content,
+				"description": option.Description,
+				"serial_num":  option.SerialNum,
 			}
 			optionsResponse = append(optionsResponse, optionResponse)
 		}
 		questionMap := map[string]interface{}{
-			"id":            question.SerialNum,
-			"serial_num":    question.SerialNum,
-			"subject":       question.Subject,
-			"description":   question.Description,
-			"required":      question.Required,
-			"unique":        question.Unique,
-			"other_option":  question.OtherOption,
-			"img":           question.Img,
-			"question_type": question.QuestionType,
-			"reg":           question.Reg,
-			"options":       optionsResponse,
+			"id":             question.SerialNum,
+			"serial_num":     question.SerialNum,
+			"subject":        question.Subject,
+			"description":    question.Description,
+			"required":       question.Required,
+			"unique":         question.Unique,
+			"other_option":   question.OtherOption,
+			"img":            question.Img,
+			"question_type":  question.QuestionType,
+			"reg":            question.Reg,
+			"maximum_option": question.MaximumOption,
+			"minimum_option": question.MinimumOption,
+			"options":        optionsResponse,
 		}
 		questionsResponse = append(questionsResponse, questionMap)
 	}
 	response := map[string]interface{}{
-		"id":        survey.ID,
-		"title":     survey.Title,
-		"time":      survey.Deadline,
-		"desc":      survey.Desc,
-		"img":       survey.Img,
-		"questions": questionsResponse,
+		"id":          survey.ID,
+		"title":       survey.Title,
+		"time":        survey.Deadline,
+		"desc":        survey.Desc,
+		"img":         survey.Img,
+		"status":      survey.Status,
+		"survey_type": survey.Type,
+		"verify":      survey.Verify,
+		"day_limit":   survey.DailyLimit,
+		"start_time":  survey.StartTime,
+		"questions":   questionsResponse,
 	}
 
 	utils.JsonSuccessResponse(c, response)
