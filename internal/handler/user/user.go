@@ -376,22 +376,52 @@ func GetSurveyStatistics(c *gin.Context) {
 		return
 	}
 
-	questionIDMap := make(map[int]bool)
-	questionIDs := make([]int, 0)
-
-	for _, sheet := range answersheets {
-		for _, answer := range sheet.Answers {
-			if answer.QuestionID != 0 && !questionIDMap[answer.QuestionID] {
-				questionIDMap[answer.QuestionID] = true
-				questionIDs = append(questionIDs, answer.QuestionID)
-			}
-		}
-	}
-
-	questions, err := service.GetQuestionsByIDs(questionIDs)
+	questions, err := service.GetQuestionsBySurveyID(data.ID)
 	if err != nil {
 		c.Error(&gin.Error{Err: errors.New("获取问题信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)
+		return
+	}
+
+	// 如果 answersheets 为空，则返回所有问题和选项统计为 0
+	if len(answersheets) == 0 {
+		response := make([]GetSurveyStatisticsResponse, 0, len(questions))
+		for _, q := range questions {
+			options, err := service.GetOptionsByQuestionID(q.ID)
+			if err != nil {
+				c.Error(&gin.Error{Err: errors.New("获取选项信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+				utils.JsonErrorResponse(c, code.ServerError)
+				return
+			}
+
+			qOptions := make([]GetOptionCount, 0, len(options)+1)
+			for _, option := range options {
+				qOptions = append(qOptions, GetOptionCount{
+					SerialNum: option.SerialNum,
+					Content:   option.Content,
+					Count:     0,
+					Rank:      1,
+				})
+			}
+
+			// 如果支持 "其他" 选项，添加一项
+			if q.OtherOption {
+				qOptions = append(qOptions, GetOptionCount{
+					SerialNum: 0,
+					Content:   "其他",
+					Count:     0,
+					Rank:      1,
+				})
+			}
+
+			response = append(response, GetSurveyStatisticsResponse{
+				SerialNum:    q.SerialNum,
+				Question:     q.Subject,
+				QuestionType: q.QuestionType,
+				Options:      qOptions,
+			})
+		}
+		utils.JsonSuccessResponse(c, gin.H{"statistics": response})
 		return
 	}
 
