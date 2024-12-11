@@ -87,19 +87,19 @@ func CreateSurvey(c *gin.Context) {
 		question.SerialNum = i + 1
 
 		//检测多选题目的最多选项数和最少选项数
-		if question.MaximumOption < question.MinimumOption {
+		if (question.QuestionType == 2) && (question.MaximumOption < question.MinimumOption) {
 			c.Error(&gin.Error{Err: errors.New("多选最多选项数小于最少选项数"), Type: gin.ErrorTypeAny})
 			utils.JsonErrorResponse(c, code.OptionNumError)
 			return
 		}
 		// 检查多选选项和最少选项数是否符合要求
-		if len(question.Options) < int(question.MinimumOption) {
+		if (question.QuestionType == 2) && len(question.Options) < int(question.MinimumOption) {
 			c.Error(&gin.Error{Err: errors.New("选项数量小于最少选项数"), Type: gin.ErrorTypeAny})
 			utils.JsonErrorResponse(c, code.OptionNumError)
 			return
 		}
 		// 检查最多选项数是否符合要求
-		if int(question.MaximumOption) <= 0 {
+		if (question.QuestionType == 2) && int(question.MaximumOption) <= 0 {
 			c.Error(&gin.Error{Err: errors.New("最多选项数小于等于0"), Type: gin.ErrorTypeAny})
 			utils.JsonErrorResponse(c, code.OptionNumError)
 			return
@@ -362,19 +362,19 @@ func UpdateSurvey(c *gin.Context) {
 		question.SerialNum = i + 1
 
 		//检测多选题目的最多选项数和最少选项数
-		if question.MaximumOption < question.MinimumOption {
+		if (question.QuestionType == 2) && (question.MaximumOption < question.MinimumOption) {
 			c.Error(&gin.Error{Err: errors.New("多选最多选项数小于最少选项数"), Type: gin.ErrorTypeAny})
 			utils.JsonErrorResponse(c, code.OptionNumError)
 			return
 		}
 		// 检查多选选项和最少选项数是否符合要求
-		if len(question.Options) < int(question.MinimumOption) {
+		if (question.QuestionType == 2) && (len(question.Options) < int(question.MinimumOption)) {
 			c.Error(&gin.Error{Err: errors.New("选项数量小于最少选项数"), Type: gin.ErrorTypeAny})
 			utils.JsonErrorResponse(c, code.OptionNumError)
 			return
 		}
 		// 检查最多选项数是否符合要求
-		if int(question.MaximumOption) <= 0 {
+		if (question.QuestionType == 2) && (int(question.MaximumOption) <= 0) {
 			c.Error(&gin.Error{Err: errors.New("最多选项数小于等于0"), Type: gin.ErrorTypeAny})
 			utils.JsonErrorResponse(c, code.OptionNumError)
 			return
