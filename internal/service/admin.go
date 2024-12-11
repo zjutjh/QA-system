@@ -4,7 +4,6 @@ import (
 	"QA-System/internal/dao"
 	"QA-System/internal/models"
 	"QA-System/internal/pkg/log"
-	"QA-System/internal/pkg/redis"
 	"QA-System/internal/pkg/utils"
 	"bufio"
 	"encoding/json"
@@ -127,6 +126,14 @@ func UpdateSurvey(id int, surveyType, limit uint, verify bool, title string, des
 		if err != nil {
 			return err
 		}
+		err = d.DeleteAllQuestionCache(ctx)
+		if err != nil {
+			return err
+		}
+		err = d.DeleteAllOptionCache(ctx)
+		if err != nil {
+			return err
+		}
 	}
 	//修改问卷信息
 	err = d.UpdateSurvey(ctx, id, surveyType, limit, verify, title, desc, img, time, startTime)
@@ -196,6 +203,14 @@ func DeleteSurvey(id int) error {
 		}
 	}
 	err = d.DeleteQuestionBySurveyID(ctx, id)
+	if err != nil {
+		return err
+	}
+	err = d.DeleteAllQuestionCache(ctx)
+	if err != nil {
+		return err
+	}
+	err = d.DeleteAllOptionCache(ctx)
 	if err != nil {
 		return err
 	}
@@ -378,35 +393,13 @@ func GetSurveyAnswersBySurveyID(sid int) ([]dao.AnswerSheet, error) {
 
 func GetOptionByQIDAndAnswer(qid int, answer string) (*models.Option, error) {
 	var option *models.Option
-
-	// 从 Redis 获取
-	cachedData, err := redis.RedisClient.Get(ctx, fmt.Sprintf("option:%d:%s", qid, answer)).Result()
-	if err == nil && cachedData != "" {
-		// 反序列化 JSON 为结构体
-		if err := json.Unmarshal([]byte(cachedData), &option); err == nil {
-			return option, nil
-		}
-	}
-	option, err = d.GetOptionByQIDAndAnswer(ctx, qid, answer)
-	if err != nil {
-		return nil, err
-	}
-	// 序列化为 JSON 后存储到 Redis
-	jsonData, err := json.Marshal(option)
-	if err == nil {
-		redis.RedisClient.Set(ctx, fmt.Sprintf("option:%d:%s", qid, answer), jsonData, 20*time.Minute)
-	}
-	return option, nil
+	option, err := d.GetOptionByQIDAndAnswer(ctx, qid, answer)
+	return option, err
 }
 
 func GetOptionByQIDAndSerialNum(qid int, serialNum int) (*models.Option, error) {
 	option, err := d.GetOptionByQIDAndSerialNum(ctx, qid, serialNum)
 	return option, err
-}
-
-func GetQuestionsByIDs(ids []int) ([]models.Question, error) {
-	questions, err := d.GetQuestionsByIDs(ctx, ids)
-	return questions, err
 }
 
 func contains(arr []string, str string) bool {

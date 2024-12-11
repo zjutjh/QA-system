@@ -3,8 +3,6 @@ package service
 import (
 	"QA-System/internal/dao"
 	"QA-System/internal/models"
-	"QA-System/internal/pkg/redis"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/disintegration/imaging"
@@ -34,50 +32,13 @@ func GetQuestionsBySurveyID(sid int) ([]models.Question, error) {
 
 func GetOptionsByQuestionID(questionId int) ([]models.Option, error) {
 	var options []models.Option
-
-	// 从 Redis 获取
-	cachedData, err := redis.RedisClient.Get(ctx, fmt.Sprintf("options:%d", questionId)).Result()
-	if err == nil && cachedData != "" {
-		// 反序列化 JSON 为结构体
-		if err := json.Unmarshal([]byte(cachedData), &options); err == nil {
-			return options, nil
-		}
-	}
-
-	// 从数据库获取
-	options, err = d.GetOptionsByQuestionID(ctx, questionId)
-	if err != nil {
-		return nil, err
-	}
-
-	// 序列化为 JSON 后存储到 Redis
-	jsonData, err := json.Marshal(options)
-	if err == nil {
-		redis.RedisClient.Set(ctx, fmt.Sprintf("options:%d", questionId), jsonData, 20*time.Minute)
-	}
-
-	return options, nil
+	options, err := d.GetOptionsByQuestionID(ctx, questionId)
+	return options, err
 }
 
 func GetQuestionByID(id int) (*models.Question, error) {
 	var question *models.Question
-	cachedData, err := redis.RedisClient.Get(ctx, fmt.Sprintf("question:%d", id)).Result()
-	if err == nil && cachedData != "" {
-		// 反序列化 JSON 为结构体
-		if err := json.Unmarshal([]byte(cachedData), &question); err == nil {
-			return question, nil
-		}
-	}
-	question, err = d.GetQuestionByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	// 序列化为 JSON 后存储到 Redis
-	jsonData, err := json.Marshal(question)
-	if err == nil {
-		redis.RedisClient.Set(ctx, fmt.Sprintf("question:%d", id), jsonData, 20*time.Minute)
-	}
+	question, err := d.GetQuestionByID(ctx, id)
 	return question, err
 }
 
