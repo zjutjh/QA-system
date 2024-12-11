@@ -10,7 +10,6 @@ import (
 	"QA-System/internal/service"
 	"errors"
 	"github.com/go-redis/redis/v8"
-	"gorm.io/gorm"
 	"sort"
 	"strconv"
 	"strings"
@@ -442,56 +441,55 @@ func GetSurveyStatistics(c *gin.Context) {
 	}
 
 	questionMap := make(map[int]models.Question)
+	optionsMap := make(map[int][]models.Option)
+	optionAnswerMap := make(map[int]map[string]models.Option)
+	optionSerialNumMap := make(map[int]map[int]models.Option)
 	for _, question := range questions {
 		questionMap[question.ID] = question
+		optionAnswerMap[question.ID] = make(map[string]models.Option)
+		optionSerialNumMap[question.ID] = make(map[int]models.Option)
+		options, err := service.GetOptionsByQuestionID(question.ID)
+		if err != nil {
+			c.Error(&gin.Error{Err: errors.New("获取选项信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.ServerError)
+			return
+		}
+		optionsMap[question.ID] = options
+		for _, option := range options {
+			optionAnswerMap[question.ID][option.Content] = option
+			optionSerialNumMap[question.ID][option.SerialNum] = option
+		}
 	}
 
 	optionCounts := make(map[int]map[int]int)
 	for _, sheet := range answersheets {
 		for _, answer := range sheet.Answers {
-			options, err := service.GetOptionsByQuestionID(answer.QuestionID)
-			if err != nil {
-				c.Error(&gin.Error{Err: errors.New("获取选项信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
-				utils.JsonErrorResponse(c, code.ServerError)
-				return
-			}
+			options := optionsMap[answer.QuestionID]
 			question := questionMap[answer.QuestionID]
-			if err != nil {
-				c.Error(&gin.Error{Err: errors.New("获取选项信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
-				utils.JsonErrorResponse(c, code.ServerError)
-				return
+			// 初始化选项统计（确保每个选项的计数存在且为 0）
+			if _, initialized := optionCounts[question.ID]; !initialized {
+				counts := ensureMap(optionCounts, question.ID)
+				for _, option := range options {
+					counts[option.SerialNum] = 0
+				}
 			}
 			if question.QuestionType == 1 || question.QuestionType == 2 {
 				answerOptions := strings.Split(answer.Content, "┋")
+				questionOptions := optionAnswerMap[answer.QuestionID]
 				for _, answerOption := range answerOptions {
-					option, err := service.GetOptionByQIDAndAnswer(answer.QuestionID, answerOption)
-					if err == gorm.ErrRecordNotFound {
-						// 则说明是其他选项，计为其他
-						if optionCounts[question.ID] == nil {
-							optionCounts[question.ID] = make(map[int]int)
+					// 查找选项
+					if questionOptions != nil {
+						option, exists := questionOptions[answerOption]
+						if exists {
+							// 如果找到选项，处理逻辑
+							ensureMap(optionCounts, answer.QuestionID)[option.SerialNum]++
+							continue
 						}
-						optionCounts[question.ID][0]++
-						continue
-					} else if err != nil {
-						c.Error(&gin.Error{Err: errors.New("获取选项信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
-						utils.JsonErrorResponse(c, code.ServerError)
-						return
 					}
-					if optionCounts[question.ID] == nil {
-						optionCounts[question.ID] = make(map[int]int)
-					}
-					optionCounts[question.ID][option.SerialNum]++
+					// 如果选项不存在，处理为 "其他" 选项
+					ensureMap(optionCounts, answer.QuestionID)[0]++
 				}
 			}
-			for _, option := range options {
-				if optionCounts[question.ID] == nil {
-					optionCounts[question.ID] = make(map[int]int)
-				}
-				if _, exists := optionCounts[question.ID][option.SerialNum]; !exists {
-					optionCounts[question.ID][option.SerialNum] = 0
-				}
-			}
-
 		}
 	}
 
@@ -518,11 +516,7 @@ func GetSurveyStatistics(c *gin.Context) {
 		sort.Ints(sortedSerialNums)
 		for _, oSerialNum := range sortedSerialNums {
 			count := options[oSerialNum]
-			op, err := service.GetOptionByQIDAndSerialNum(q.ID, oSerialNum)
-			if err != nil {
-				utils.JsonErrorResponse(c, code.ServerError)
-				return
-			}
+			op := optionSerialNumMap[qid][oSerialNum]
 			qOptions = append(qOptions, GetOptionCount{
 				SerialNum: op.SerialNum,
 				Content:   op.Content,
@@ -568,4 +562,11 @@ func GetSurveyStatistics(c *gin.Context) {
 
 	}
 	utils.JsonSuccessResponse(c, gin.H{"statistics": response})
+}
+
+func ensureMap(m map[int]map[int]int, key int) map[int]int {
+	if m[key] == nil {
+		m[key] = make(map[int]int)
+	}
+	return m[key]
 }
