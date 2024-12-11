@@ -767,16 +767,7 @@ func GetSurveyStatistics(c *gin.Context) {
 		return
 	}
 
-	questionIDs := make([]int, 0)
-	for _, sheet := range answersheets {
-		for _, answer := range sheet.Answers {
-			if answer.QuestionID != 0 {
-				questionIDs = append(questionIDs, answer.QuestionID)
-			}
-		}
-	}
-
-	questions, err := service.GetQuestionsByIDs(questionIDs)
+	questions, err := service.GetQuestionsBySurveyID(data.ID)
 	if err != nil {
 		c.Error(&gin.Error{Err: errors.New("获取问题信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
 		utils.JsonErrorResponse(c, code.ServerError)
@@ -784,35 +775,53 @@ func GetSurveyStatistics(c *gin.Context) {
 	}
 
 	questionMap := make(map[int]models.Question)
+	optionsMap := make(map[int][]models.Option)
+	optionAnswerMap := make(map[int]map[string]models.Option)
+	optionSerialNumMap := make(map[int]map[int]models.Option)
 	for _, question := range questions {
 		questionMap[question.ID] = question
+		optionAnswerMap[question.ID] = make(map[string]models.Option)
+		optionSerialNumMap[question.ID] = make(map[int]models.Option)
+		options, err := service.GetOptionsByQuestionID(question.ID)
+		if err != nil {
+			c.Error(&gin.Error{Err: errors.New("获取选项信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
+			utils.JsonErrorResponse(c, code.ServerError)
+			return
+		}
+		optionsMap[question.ID] = options
+		for _, option := range options {
+			optionAnswerMap[question.ID][option.Content] = option
+			optionSerialNumMap[question.ID][option.SerialNum] = option
+		}
 	}
 
 	optionCounts := make(map[int]map[int]int)
 	for _, sheet := range answersheets {
 		for _, answer := range sheet.Answers {
+			options := optionsMap[answer.QuestionID]
 			question := questionMap[answer.QuestionID]
+			// 初始化选项统计（确保每个选项的计数存在且为 0）
+			if _, initialized := optionCounts[question.ID]; !initialized {
+				counts := ensureMap(optionCounts, question.ID)
+				for _, option := range options {
+					counts[option.SerialNum] = 0
+				}
+			}
 			if question.QuestionType == 1 || question.QuestionType == 2 {
 				answerOptions := strings.Split(answer.Content, "┋")
+				questionOptions := optionAnswerMap[answer.QuestionID]
 				for _, answerOption := range answerOptions {
-					option, err := service.GetOptionByQIDAndAnswer(answer.QuestionID, answerOption)
-					if err == gorm.ErrRecordNotFound {
-						// 则说明是其他选项，计为其他
-						if optionCounts[question.ID] == nil {
-							optionCounts[question.ID] = make(map[int]int)
+					// 查找选项
+					if questionOptions != nil {
+						option, exists := questionOptions[answerOption]
+						if exists {
+							// 如果找到选项，处理逻辑
+							ensureMap(optionCounts, answer.QuestionID)[option.SerialNum]++
+							continue
 						}
-						optionCounts[question.ID][0]++
-						continue
-
-					} else if err != nil {
-						c.Error(&gin.Error{Err: errors.New("获取选项信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
-						utils.JsonErrorResponse(c, code.ServerError)
-						return
 					}
-					if optionCounts[question.ID] == nil {
-						optionCounts[question.ID] = make(map[int]int)
-					}
-					optionCounts[question.ID][option.SerialNum]++
+					// 如果选项不存在，处理为 "其他" 选项
+					ensureMap(optionCounts, answer.QuestionID)[0]++
 				}
 			}
 		}
@@ -844,12 +853,7 @@ func GetSurveyStatistics(c *gin.Context) {
 				continue
 			}
 			count := options[oSerialNum]
-			op, err := service.GetOptionByQIDAndSerialNum(q.ID, oSerialNum)
-			if err != nil {
-				c.Error(&gin.Error{Err: errors.New("获取选项信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
-				utils.JsonErrorResponse(c, code.ServerError)
-				return
-			}
+			op := optionSerialNumMap[qid][oSerialNum]
 			qOptions = append(qOptions, GetOptionCount{
 				SerialNum: op.SerialNum,
 				Content:   op.Content,
@@ -963,4 +967,11 @@ func CreateQuestionPre(c *gin.Context) {
 		return
 	}
 	utils.JsonSuccessResponse(c, nil)
+}
+
+func ensureMap(m map[int]map[int]int, key int) map[int]int {
+	if m[key] == nil {
+		m[key] = make(map[int]int)
+	}
+	return m[key]
 }
