@@ -4,6 +4,7 @@ import (
 	"QA-System/internal/dao"
 	"QA-System/internal/models"
 	"QA-System/internal/pkg/log"
+	"QA-System/internal/pkg/redis"
 	"QA-System/internal/pkg/utils"
 	"bufio"
 	"encoding/json"
@@ -147,10 +148,6 @@ func UpdateSurvey(id int, surveyType, limit uint, verify bool, title string, des
 		}
 	}
 	return nil
-}
-
-func UpdateSurveyPart(id int, title string, desc string, img string, time time.Time) error {
-	return d.UpdateSurvey(ctx, id, title, desc, img, time)
 }
 
 func UserInManage(uid int, sid int) bool {
@@ -380,8 +377,26 @@ func GetSurveyAnswersBySurveyID(sid int) ([]dao.AnswerSheet, error) {
 }
 
 func GetOptionByQIDAndAnswer(qid int, answer string) (*models.Option, error) {
-	option, err := d.GetOptionByQIDAndAnswer(ctx, qid, answer)
-	return option, err
+	var option *models.Option
+
+	// 从 Redis 获取
+	cachedData, err := redis.RedisClient.Get(ctx, fmt.Sprintf("option:%d:%s", qid, answer)).Result()
+	if err == nil && cachedData != "" {
+		// 反序列化 JSON 为结构体
+		if err := json.Unmarshal([]byte(cachedData), &option); err == nil {
+			return option, nil
+		}
+	}
+	option, err = d.GetOptionByQIDAndAnswer(ctx, qid, answer)
+	if err != nil {
+		return nil, err
+	}
+	// 序列化为 JSON 后存储到 Redis
+	jsonData, err := json.Marshal(option)
+	if err == nil {
+		redis.RedisClient.Set(ctx, fmt.Sprintf("option:%d:%s", qid, answer), jsonData, 20*time.Minute)
+	}
+	return option, nil
 }
 
 func GetOptionByQIDAndSerialNum(qid int, serialNum int) (*models.Option, error) {
@@ -750,7 +765,6 @@ func UpdateAdminPassword(id int, password string) error {
 	return err
 }
 
-
 func CreateQuestionPre(name string, value []string) error {
 	// 将String[]类型转化为String,以逗号分隔
 	pre := strings.Join(value, ",")
@@ -766,6 +780,7 @@ func GetQuestionPre(name string) ([]string, error) {
 	// 将预先信息转化为String[]类型
 	pre := strings.Split(value, ",")
 	return pre, nil
+}
 
 func DeleteOauthRecord(sid int) error {
 	return d.DeleteRecordSheets(ctx, sid)
