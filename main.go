@@ -3,15 +3,15 @@ package main
 import (
 	global "QA-System/internal/global/config"
 	"QA-System/internal/middleware"
-	mongodb "QA-System/internal/pkg/database/mongodb"
-	mysql "QA-System/internal/pkg/database/mysql"
+	"QA-System/internal/pkg/database/mongodb"
+	"QA-System/internal/pkg/database/mysql"
 	"QA-System/internal/pkg/log"
-	"QA-System/internal/pkg/queue/asynq"
 	"QA-System/internal/pkg/session"
+	"QA-System/internal/pkg/utils"
 	"QA-System/internal/router"
 	"QA-System/internal/service"
-
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -22,23 +22,25 @@ func main() {
 	// 初始化日志系统
 	log.ZapInit()
 	// 初始化数据库
-	db := mysql.MysqlInit()
-	mdb := mongodb.MongodbInit()
+	db := mysql.Init()
+	mdb := mongodb.Init()
 	// 初始化dao
-	service.ServiceInit(db, mdb)
+	service.Init(db, mdb)
+	if err := utils.Init(); err != nil {
+		zap.L().Fatal(err.Error())
+	}
 
 	// 初始化gin
 	r := gin.Default()
-	r.Use(middlewares.ErrHandler())
-	r.NoMethod(middlewares.HandleNotFound)
-	r.NoRoute(middlewares.HandleNotFound)
+	r.Use(middleware.ErrHandler())
+	r.NoMethod(middleware.HandleNotFound)
+	r.NoRoute(middleware.HandleNotFound)
 	r.Static("public/static", "./public/static")
 	r.Static("public/xlsx", "./public/xlsx")
 	session.Init(r)
 	router.Init(r)
-	go asynq.AsynqInit()
 	err := r.Run(":" + global.Config.GetString("server.port"))
 	if err != nil {
-		log.Logger.Fatal("Failed to start the server:" + err.Error())
+		zap.L().Fatal("Failed to start the server:" + err.Error())
 	}
 }

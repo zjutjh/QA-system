@@ -1,19 +1,17 @@
-package middlewares
+package middleware
 
 import (
 	"QA-System/internal/pkg/code"
-	"QA-System/internal/service"
 	"QA-System/internal/pkg/utils"
-	"errors"
-
+	"QA-System/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
+// CheckLogin 检查登录
 func CheckLogin(c *gin.Context) {
 	isLogin := service.CheckUserSession(c)
 	if !isLogin {
-		c.Error(errors.New("未登录"))
-		utils.JsonErrorResponse(c, code.NotLogin)
+		utils.JsonErrorResponse(c, code.NotLogin.Code, code.NotLogin.Msg)
 		c.Abort()
 		return
 	}

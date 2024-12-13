@@ -1,182 +1,163 @@
 package admin
 
 import (
-	"QA-System/internal/models"
+	"errors"
+
+	"QA-System/internal/model"
 	"QA-System/internal/pkg/code"
 	"QA-System/internal/pkg/utils"
 	"QA-System/internal/service"
-	"errors"
-
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
-type LoginData struct {
+type loginData struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
 
-// 登录
+// Login 登录
 func Login(c *gin.Context) {
-	var data LoginData
+	var data loginData
 	err := c.ShouldBindJSON(&data)
 	if err != nil {
-		c.Error(&gin.Error{Err: errors.New("登录失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.ParamError)
+		code.AbortWithException(c, code.ParamError, err)
 		return
 	}
-	//判断密码是否正确
+	// 判断密码是否正确
 	user, err := service.GetAdminByUsername(data.Username)
 	if err != nil {
-		c.Error(&gin.Error{Err: errors.New("用户信息获取失败的原因: " + err.Error()), Type: gin.ErrorTypeAny})
-		if err == gorm.ErrRecordNotFound {
-			utils.JsonErrorResponse(c, code.UserNotFind)
-			return
-		} else {
-			utils.JsonErrorResponse(c, code.ServerError)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			code.AbortWithException(c, code.UserNotFind, err)
 			return
 		}
-	}
-	if user.Password != data.Password {
-		c.Error(&gin.Error{Err: errors.New("密码错误"), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.NoThatPasswordOrWrong)
+		code.AbortWithException(c, code.ServerError, err)
 		return
 	}
-	//设置session
+	if user.Password != data.Password {
+		code.AbortWithException(c, code.NoThatPasswordOrWrong, errors.New("密码错误"))
+		return
+	}
+	// 设置session
 	err = service.SetUserSession(c, user)
 	if err != nil {
-		c.Error(&gin.Error{Err: errors.New("设置session失败的原因: " + err.Error()), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.ServerError)
+		code.AbortWithException(c, code.ServerError, err)
 		return
 	}
 
 	utils.JsonSuccessResponse(c, nil)
 }
 
-type RegisterData struct {
+type registerData struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
 	Key      string `json:"key" binding:"required"`
 }
 
-// 注册
+// Register 注册
 func Register(c *gin.Context) {
-	var data RegisterData
+	var data registerData
 	err := c.ShouldBindJSON(&data)
 	if err != nil {
-		c.Error(&gin.Error{Err: errors.New("注册失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.ParamError)
+		code.AbortWithException(c, code.ParamError, err)
 		return
 	}
-	//判断是否有权限
+	// 判断是否有权限
 	adminKey := service.GetConfigKey()
 	if adminKey != data.Key {
-		c.Error(&gin.Error{Err: errors.New(data.Username + "没有权限"), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.NotSuperAdmin)
+		code.AbortWithException(c, code.NotSuperAdmin, errors.New(data.Username+"没有权限"))
 		return
 	}
-	//判断用户是否存在
+	// 判断用户是否存在
 	err = service.IsAdminExist(data.Username)
 	if err == nil {
-		c.Error(&gin.Error{Err: errors.New(data.Username + "用户已存在"), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.UserExist)
+		code.AbortWithException(c, code.UserExist, errors.New(data.Username+"用户已存在"))
 		return
 	}
-	//创建用户
-	err = service.CreateAdmin(models.User{
+	// 创建用户
+	err = service.CreateAdmin(model.User{
 		Username:  data.Username,
 		Password:  data.Password,
 		AdminType: 1,
 	})
 	if err != nil {
-		c.Error(&gin.Error{Err: errors.New("创建用户失败的原因: " + err.Error()), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.ServerError)
+		code.AbortWithException(c, code.ServerError, err)
 		return
 	}
 
 	utils.JsonSuccessResponse(c, nil)
 }
 
-type UpdatePasswordData struct {
+type updatePasswordData struct {
 	OldPassword string `json:"old_password" binding:"required"`
 	NewPassword string `json:"new_password" binding:"required"`
 }
 
-// 修改密码
+// UpdatePassword 修改密码
 func UpdatePassword(c *gin.Context) {
-	var data UpdatePasswordData
+	var data updatePasswordData
 	err := c.ShouldBindJSON(&data)
 	if err != nil {
-		c.Error(&gin.Error{Err: errors.New("重置密码失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.ParamError)
+		code.AbortWithException(c, code.ParamError, err)
 		return
 	}
-	//判断用户是否存在
+	// 判断用户是否存在
 	user, err := service.GetUserSession(c)
 	if err != nil {
-		c.Error(&gin.Error{Err: errors.New("获取用户缓存信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.NotLogin)
+		code.AbortWithException(c, code.NotLogin, err)
 		return
 	}
 	// 判断旧密码是否正确
 	if user.Password != data.OldPassword {
-		c.Error(&gin.Error{Err: errors.New("旧密码错误"), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.NoThatPasswordOrWrong)
+		code.AbortWithException(c, code.NoThatPasswordOrWrong, errors.New("旧密码错误"))
 		return
 	}
 	// 判断新密码是否与旧密码相同
 	if user.Password == data.NewPassword {
-		c.Error(&gin.Error{Err: errors.New("新密码与旧密码相同"), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.NewPasswordSame)
+		code.AbortWithException(c, code.NewPasswordSame, errors.New("新密码与旧密码相同"))
 		return
 	}
-	//修改密码
+	// 修改密码
 	err = service.UpdateAdminPassword(user.ID, data.NewPassword)
 	if err != nil {
-		c.Error(&gin.Error{Err: errors.New("修改密码失败的原因: " + err.Error()), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.ServerError)
+		code.AbortWithException(c, code.ServerError, err)
 		return
 	}
 	utils.JsonSuccessResponse(c, nil)
 }
 
-type ResetPasswordData struct {
+type resetPasswordData struct {
 	UserName string `json:"username" binding:"required"`
 }
 
-// 重置密码
+// ResetPassword 重置密码
 func ResetPassword(c *gin.Context) {
-	var data ResetPasswordData
+	var data resetPasswordData
 	err := c.ShouldBindJSON(&data)
 	if err != nil {
-		c.Error(&gin.Error{Err: errors.New("重置密码失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.ParamError)
+		code.AbortWithException(c, code.ParamError, err)
 		return
 	}
-	//鉴权
+	// 鉴权
 	admin, err := service.GetUserSession(c)
 	if err != nil {
-		c.Error(&gin.Error{Err: errors.New("获取用户缓存信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.NotLogin)
+		code.AbortWithException(c, code.NotLogin, err)
 		return
 	}
 	if admin.AdminType != 2 {
-		c.Error(&gin.Error{Err: errors.New(admin.Username + "没有权限"), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.NoPermission)
+		code.AbortWithException(c, code.NoPermission, errors.New(admin.Username+"没有权限"))
 		return
 	}
-	//判断用户是否存在
+	// 判断用户是否存在
 	user, err := service.GetAdminByUsername(data.UserName)
 	if err != nil {
-		c.Error(&gin.Error{Err: errors.New("获取用户信息失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.ServerError)
+		code.AbortWithException(c, code.UserNotFind, err)
 		return
 	}
-	//重置密码
+	// 重置密码
 	err = service.UpdateAdminPassword(user.ID, "jhwl")
 	if err != nil {
-		c.Error(&gin.Error{Err: errors.New("重置密码失败原因: " + err.Error()), Type: gin.ErrorTypeAny})
-		utils.JsonErrorResponse(c, code.ServerError)
+		code.AbortWithException(c, code.ServerError, err)
 		return
 	}
 	utils.JsonSuccessResponse(c, nil)

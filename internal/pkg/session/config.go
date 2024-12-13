@@ -2,59 +2,55 @@ package session
 
 import (
 	"strings"
+
 	"QA-System/internal/global/config"
-	WeJHSDK  "github.com/zjutjh/WeJH-SDK"
+	"github.com/zjutjh/WeJH-SDK/redisHelper"
+	"github.com/zjutjh/WeJH-SDK/sessionHelper"
 )
 
 type driver string
 
 const (
+	// Memory 内存
 	Memory driver = "memory"
-	Redis  driver = "redis"
+	// Redis redis缓存
+	Redis driver = "redis"
 )
 
-var defaultName = "wejh-session"
+var defaultName = "qa-session"
 
-
-
-func getConfig() WeJHSDK.SessionInfoConfig {
-
-	wc := WeJHSDK.SessionInfoConfig{}
-	wc.Driver = string(Memory)
-	if global.Config.IsSet("session.driver") {
-		wc.Driver = strings.ToLower(global.Config.GetString("session.driver"))
-	}
-
+func getConfig() sessionHelper.InfoConfig {
+	wc := sessionHelper.InfoConfig{}
 	wc.Name = defaultName
-	if global.Config.IsSet("session.name") {
-		wc.Name = strings.ToLower(global.Config.GetString("session.name"))
+	if config.Config.IsSet("session.name") {
+		wc.Name = strings.ToLower(config.Config.GetString("session.name"))
 	}
 
-	wc.SecretKey = "secret"
+	wc.SecretKey = strings.ToLower(config.Config.GetString("session.secret"))
 
 	wc.RedisConfig = getRedisConfig()
 
 	return wc
 }
 
-func getRedisConfig() WeJHSDK.RedisInfoConfig {
-	Info := WeJHSDK.RedisInfoConfig{
+func getRedisConfig() *redisHelper.InfoConfig {
+	info := redisHelper.InfoConfig{
 		Host:     "localhost",
 		Port:     "6379",
 		DB:       0,
 		Password: "",
 	}
-	if global.Config.IsSet("redis.host") {
-		Info.Host = global.Config.GetString("redis.host")
+	if config.Config.IsSet("redis.host") {
+		info.Host = config.Config.GetString("redis.host")
 	}
-	if global.Config.IsSet("redis.port") {
-		Info.Port = global.Config.GetString("redis.port")
+	if config.Config.IsSet("redis.port") {
+		info.Port = config.Config.GetString("redis.port")
 	}
-	if global.Config.IsSet("redis.db") {
-		Info.DB = global.Config.GetInt("redis.db")
+	if config.Config.IsSet("redis.db") {
+		info.DB = config.Config.GetInt("redis.db")
 	}
-	if global.Config.IsSet("redis.pass") {
-		Info.Password = global.Config.GetString("redis.pass")
+	if config.Config.IsSet("redis.pass") {
+		info.Password = config.Config.GetString("redis.pass")
 	}
-	return Info
+	return &info
 }

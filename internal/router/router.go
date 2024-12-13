@@ -4,12 +4,11 @@ import (
 	a "QA-System/internal/handler/admin"
 	u "QA-System/internal/handler/user"
 	"QA-System/internal/middleware"
-
 	"github.com/gin-gonic/gin"
 )
 
+// Init 初始化路由
 func Init(r *gin.Engine) {
-
 	const pre = "/api"
 
 	api := r.Group(pre)
@@ -25,7 +24,7 @@ func Init(r *gin.Engine) {
 			user.POST("/upload/file", u.UploadFile)
 			user.POST("/oauth", u.Oauth)
 		}
-		admin := api.Group("/admin", middlewares.CheckLogin)
+		admin := api.Group("/admin", middleware.CheckLogin)
 		{
 			api.POST("/admin/update", a.UpdatePassword)
 			api.POST("/admin/reset", a.ResetPassword)
@@ -38,15 +37,12 @@ func Init(r *gin.Engine) {
 			admin.GET("/statics/answers", a.GetSurveyStatistics)
 			admin.DELETE("/delete", a.DeleteSurvey)
 
-			admin.POST("/permission/create", a.CreatrPermission)
+			admin.POST("/permission/create", a.CreatePermission)
 			admin.DELETE("/permission/delete", a.DeletePermission)
 
 			admin.GET("/list/questions", a.GetAllSurvey)
 			admin.GET("/single/question", a.GetSurvey)
 			admin.GET("/download", a.DownloadFile)
-
-			admin.GET("/log", a.GetLogMsg)
-
 		}
 	}
 }

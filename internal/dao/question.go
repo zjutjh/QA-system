@@ -1,14 +1,16 @@
 package dao
 
 import (
-	"QA-System/internal/models"
-	"QA-System/internal/pkg/redis"
 	"context"
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"QA-System/internal/model"
+	"QA-System/internal/pkg/redis"
 )
 
+// Question 问题模型
 type Question struct {
 	ID            int      `json:"id"`
 	SerialNum     int      `json:"serial_num"`                                         // 题目序号
@@ -25,19 +27,22 @@ type Question struct {
 	MinimumOption uint     `json:"minimum_option"`                                     // 多选最少选项数 0为不限制
 }
 
+// QuestionsList 问题列表模型
 type QuestionsList struct {
 	QuestionID int    `json:"question_id" binding:"required"`
 	SerialNum  int    `json:"serial_num"`
 	Answer     string `json:"answer"`
 }
 
-func (d *Dao) CreateQuestion(ctx context.Context, question models.Question) (models.Question, error) {
+// CreateQuestion 创建问题
+func (d *Dao) CreateQuestion(ctx context.Context, question model.Question) (model.Question, error) {
 	err := d.orm.WithContext(ctx).Create(&question).Error
 	return question, err
 }
 
-func (d *Dao) GetQuestionsBySurveyID(ctx context.Context, surveyID int) ([]models.Question, error) {
-	var questions []models.Question
+// GetQuestionsBySurveyID 根据问卷ID获取问题列表
+func (d *Dao) GetQuestionsBySurveyID(ctx context.Context, surveyID int) ([]model.Question, error) {
+	var questions []model.Question
 	cacheData, err := redis.RedisClient.Get(ctx, fmt.Sprintf("questions:sid:%d", surveyID)).Result()
 	if err == nil && cacheData != "" {
 		// 反序列化 JSON 为结构体
@@ -45,7 +50,7 @@ func (d *Dao) GetQuestionsBySurveyID(ctx context.Context, surveyID int) ([]model
 			return questions, nil
 		}
 	}
-	err = d.orm.WithContext(ctx).Model(models.Question{}).Where("survey_id = ?", surveyID).Find(&questions).Error
+	err = d.orm.WithContext(ctx).Model(model.Question{}).Where("survey_id = ?", surveyID).Find(&questions).Error
 	if err != nil {
 		return nil, err
 	}
@@ -57,8 +62,9 @@ func (d *Dao) GetQuestionsBySurveyID(ctx context.Context, surveyID int) ([]model
 	return questions, err
 }
 
-func (d *Dao) GetQuestionByID(ctx context.Context, questionID int) (*models.Question, error) {
-	var question models.Question
+// GetQuestionByID 根据问题ID获取问题
+func (d *Dao) GetQuestionByID(ctx context.Context, questionID int) (*model.Question, error) {
+	var question model.Question
 	cachedData, err := redis.RedisClient.Get(ctx, fmt.Sprintf("question:qid:%d", questionID)).Result()
 	if err == nil && cachedData != "" {
 		// 反序列化 JSON 为结构体
@@ -78,43 +84,48 @@ func (d *Dao) GetQuestionByID(ctx context.Context, questionID int) (*models.Ques
 	return &question, err
 }
 
+// DeleteQuestion 删除问题
 func (d *Dao) DeleteQuestion(ctx context.Context, questionID int) error {
 	err := redis.RedisClient.Del(ctx, fmt.Sprintf("question:qid:%d", questionID)).Err()
 	if err != nil {
 		return err
 	}
-	err = d.orm.WithContext(ctx).Where("id = ?", questionID).Delete(&models.Question{}).Error
+	err = d.orm.WithContext(ctx).Where("id = ?", questionID).Delete(&model.Question{}).Error
 	return err
 }
 
+// DeleteQuestionBySurveyID 根据问卷ID删除问题
 func (d *Dao) DeleteQuestionBySurveyID(ctx context.Context, surveyID int) error {
 	err := redis.RedisClient.Del(ctx, fmt.Sprintf("questions:sid:%d", surveyID)).Err()
 	if err != nil {
 		return err
 	}
-	err = d.orm.WithContext(ctx).Where("survey_id = ?", surveyID).Delete(&models.Question{}).Error
+	err = d.orm.WithContext(ctx).Where("survey_id = ?", surveyID).Delete(&model.Question{}).Error
 	return err
 }
 
+// CreateType 创建预先类型
 func (d *Dao) CreateType(ctx context.Context, name string, value string) error {
-	//如果type已经存在则直接更新当前type的value
-	var t models.Type
+	// 如果type已经存在则直接更新当前type的value
+	var t model.Type
 	err := d.orm.WithContext(ctx).Where("type = ?", name).First(&t).Error
 	if err == nil {
 		err = d.orm.WithContext(ctx).Model(&t).Update("value", value).Error
 		return err
 	}
-	err = d.orm.WithContext(ctx).Create(&models.Type{Type: name, Value: value}).Error
+	err = d.orm.WithContext(ctx).Create(&model.Type{Type: name, Value: value}).Error
 	return err
 }
 
+// GetType 获取预先类型
 func (d *Dao) GetType(ctx context.Context, name string) (string, error) {
-	var t models.Type
+	var t model.Type
 	err := d.orm.WithContext(ctx).Where("type = ?", name).First(&t).Error
 	return t.Value, err
 }
 
-func (d *Dao) DeleteAllQuestionCache(ctx context.Context) error {
+// DeleteAllQuestionCache 删除所有问题缓存
+func DeleteAllQuestionCache(ctx context.Context) error {
 	// 定义 Redis 前缀
 	prefix := "question"
 

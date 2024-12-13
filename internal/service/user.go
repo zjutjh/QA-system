@@ -1,15 +1,9 @@
 package service
 
 import (
-	"QA-System/internal/dao"
-	"QA-System/internal/models"
 	"errors"
 	"fmt"
-	"github.com/disintegration/imaging"
-	"github.com/gabriel-vasile/mimetype"
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	"github.com/nfnt/resize"
+	"image"
 	"image/jpeg"
 	"io"
 	"mime/multipart"
@@ -17,35 +11,48 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"QA-System/internal/dao"
+	"QA-System/internal/model"
+	"github.com/gabriel-vasile/mimetype"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/nfnt/resize"
+	"go.uber.org/zap"
 )
 
-func GetSurveyByID(id int) (*models.Survey, error) {
+// GetSurveyByID 根据ID获取问卷
+func GetSurveyByID(id int) (*model.Survey, error) {
 	survey, err := d.GetSurveyByID(ctx, id)
 	return survey, err
 }
 
-func GetQuestionsBySurveyID(sid int) ([]models.Question, error) {
-	var questions []models.Question
+// GetQuestionsBySurveyID 根据问卷ID获取问题
+func GetQuestionsBySurveyID(sid int) ([]model.Question, error) {
+	var questions []model.Question
 	questions, err := d.GetQuestionsBySurveyID(ctx, sid)
 	return questions, err
 }
 
-func GetOptionsByQuestionID(questionId int) ([]models.Option, error) {
-	var options []models.Option
+// GetOptionsByQuestionID 根据问题ID获取选项
+func GetOptionsByQuestionID(questionId int) ([]model.Option, error) {
+	var options []model.Option
 	options, err := d.GetOptionsByQuestionID(ctx, questionId)
 	return options, err
 }
 
-func GetQuestionByID(id int) (*models.Question, error) {
-	var question *models.Question
+// GetQuestionByID 根据问卷ID获取问题
+func GetQuestionByID(id int) (*model.Question, error) {
+	var question *model.Question
 	question, err := d.GetQuestionByID(ctx, id)
 	return question, err
 }
 
-func SubmitSurvey(sid int, data []dao.QuestionsList, time string) error {
+// SubmitSurvey 提交问卷
+func SubmitSurvey(sid int, data []dao.QuestionsList, t string) error {
 	var answerSheet dao.AnswerSheet
 	answerSheet.SurveyID = sid
-	answerSheet.Time = time
+	answerSheet.Time = t
 	answerSheet.Unique = true
 	qids := make([]int, 0)
 	for _, q := range data {
@@ -70,6 +77,7 @@ func SubmitSurvey(sid int, data []dao.QuestionsList, time string) error {
 	return err
 }
 
+// HandleImgUpload 处理图片上传
 func HandleImgUpload(c *gin.Context) (string, error) {
 	// 保存图片文件
 	file, err := c.FormFile("img")
@@ -91,20 +99,15 @@ func HandleImgUpload(c *gin.Context) (string, error) {
 	}
 	defer func() {
 		if err := os.RemoveAll(tempDir); err != nil {
-			fmt.Println("删除临时目录失败: ", err)
+			zap.L().Error("删除临时目录失败", zap.Error(err))
 		}
 	}() // 在处理完之后删除临时目录及其中的文件
 	// 在临时目录中创建临时文件
 	tempFile := filepath.Join(tempDir, file.Filename)
-	f, err := os.Create(tempFile)
+	f, err := safeCreateFile(tempFile)
 	if err != nil {
-		return "", errors.New("创建临时文件失败: " + err.Error())
+		return "", err
 	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			fmt.Println("关闭文件失败: ", err)
-		}
-	}()
 	// 将上传的文件保存到临时文件中
 	src, err := file.Open()
 	if err != nil {
@@ -112,7 +115,7 @@ func HandleImgUpload(c *gin.Context) (string, error) {
 	}
 	defer func() {
 		if err := src.Close(); err != nil {
-			fmt.Println("关闭文件失败: ", err)
+			zap.L().Error("关闭文件失败", zap.Error(err))
 		}
 	}()
 
@@ -123,7 +126,7 @@ func HandleImgUpload(c *gin.Context) (string, error) {
 	// 判断文件的MIME类型是否为图片
 	mime, err := mimetype.DetectFile(tempFile)
 	if err != nil || !strings.HasPrefix(mime.String(), "image/") {
-		return "", errors.New("文件类型不是图片: " + err.Error())
+		return "", errors.New("文件类型不是图片")
 	}
 	// 保存原始图片
 	filename := uuid.New().String() + ".jpg"
@@ -140,7 +143,7 @@ func HandleImgUpload(c *gin.Context) (string, error) {
 		return "", errors.New("转换和压缩图像失败: " + err.Error())
 	}
 
-	//替换原始文件为压缩后的JPG文件
+	// 替换原始文件为压缩后的JPG文件
 	err = os.Rename(jpgFile, dst)
 	if err != nil {
 		err = copyFile(jpgFile, dst)
@@ -170,20 +173,26 @@ func isImageFile(file *multipart.FileHeader) bool {
 
 // 用于转换和压缩图像的函数
 func convertAndCompressImage(srcPath, dstPath string) error {
-	srcImg, err := imaging.Open(srcPath)
+	// 打开源图像文件
+	srcFile, err := safeOpenFile(srcPath)
 	if err != nil {
 		return err
+	}
+
+	// 解码图像
+	srcImg, _, err := image.Decode(srcFile)
+	if err != nil {
+		return fmt.Errorf("failed to decode image: %w", err)
 	}
 
 	// 调整图像大小（根据需要进行调整）
 	resizedImg := resize.Resize(300, 0, srcImg, resize.Lanczos3)
 
 	// 创建新的JPG文件
-	dstFile, err := os.Create(dstPath)
+	dstFile, err := safeCreateFile(dstPath)
 	if err != nil {
 		return err
 	}
-	defer dstFile.Close()
 
 	// 以JPG格式保存调整大小的图像，并设置压缩质量为90
 	err = jpeg.Encode(dstFile, resizedImg, &jpeg.Options{Quality: 90})
@@ -195,17 +204,21 @@ func convertAndCompressImage(srcPath, dstPath string) error {
 }
 
 func copyFile(src, dst string) error {
-	srcFile, err := os.Open(src)
+	srcFile, err := safeOpenFile(src)
 	if err != nil {
 		return err
 	}
-	defer srcFile.Close()
+	defer func(srcFile *os.File) {
+		err := srcFile.Close()
+		if err != nil {
+			zap.L().Error("关闭文件失败", zap.Error(err))
+		}
+	}(srcFile)
 
-	dstFile, err := os.Create(dst)
+	dstFile, err := safeCreateFile(dst)
 	if err != nil {
 		return err
 	}
-	defer dstFile.Close()
 
 	_, err = io.Copy(dstFile, srcFile)
 	if err != nil {
@@ -215,6 +228,7 @@ func copyFile(src, dst string) error {
 	return nil
 }
 
+// HandleFileUpload 处理文件上传
 func HandleFileUpload(c *gin.Context) (string, error) {
 	// 保存文件
 	file, err := c.FormFile("file")
@@ -237,6 +251,64 @@ func HandleFileUpload(c *gin.Context) (string, error) {
 	return url, nil
 }
 
-func CreateOauthRecord(stuId string, time time.Time, sid int) error {
-	return d.SaveRecordSheet(ctx, dao.RecordSheet{StudentID: stuId, Time: time}, sid)
+// CreateOauthRecord 创建一条统一验证记录
+func CreateOauthRecord(stuId string, t time.Time, sid int) error {
+	return d.SaveRecordSheet(ctx, dao.RecordSheet{StudentID: stuId, Time: t}, sid)
+}
+
+func safeCreateFile(tempFile string) (*os.File, error) {
+	// 清理路径中的 ".."
+	cleanedPath := filepath.Clean(tempFile)
+
+	// 确保路径没有非法部分
+	if strings.Contains(cleanedPath, "..") {
+		return nil, fmt.Errorf("invalid file path: %s", cleanedPath)
+	}
+
+	f, err := os.Create(cleanedPath)
+	if err != nil {
+		return nil, err
+	}
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+			zap.L().Error("关闭文件失败", zap.Error(err))
+		}
+	}(f)
+
+	// 进一步处理文件
+	return f, nil
+}
+
+func safeOpenFile(src string) (*os.File, error) {
+	// 获取文件的绝对路径
+	absPath, err := filepath.Abs(src)
+	if err != nil {
+		return nil, err
+	}
+
+	// 清理路径，避免路径穿越
+	cleanedPath := filepath.Clean(absPath)
+
+	// 指定安全目录前缀
+	safeDir := "/public/static/"
+
+	// 使用 strings.HasPrefix 检查路径是否以安全目录前缀开始
+	if !strings.HasPrefix(cleanedPath, safeDir) {
+		return nil, fmt.Errorf("unsafe file path: %s", cleanedPath)
+	}
+
+	// 安全地打开文件
+	srcFile, err := os.Open(cleanedPath)
+	if err != nil {
+		return nil, err
+	}
+	defer func(srcFile *os.File) {
+		err := srcFile.Close()
+		if err != nil {
+			zap.L().Error("关闭文件失败", zap.Error(err))
+		}
+	}(srcFile)
+
+	return srcFile, nil
 }

@@ -2,16 +2,14 @@ package redis
 
 import (
 	"github.com/go-redis/redis/v8"
-	WeJHSDK  "github.com/zjutjh/WeJH-SDK"
+	"github.com/zjutjh/WeJH-SDK/redisHelper"
 )
 
+// RedisClient Redis客户端
 var RedisClient *redis.Client
-var RedisInfo WeJHSDK.RedisInfoConfig
 
 func init() {
 	info := getConfig()
 
-	RedisClient = WeJHSDK.GetRedisClient(info)
-	RedisInfo = info
-
+	RedisClient = redisHelper.Init(&info)
 }

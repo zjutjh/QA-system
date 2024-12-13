@@ -1,18 +1,17 @@
-package database
+package mysql
 
 import (
-	"QA-System/internal/models"
-
+	"QA-System/internal/model"
 	"gorm.io/gorm"
 )
 
 func autoMigrate(db *gorm.DB) error {
 	return db.AutoMigrate(
-		&models.User{},
-		&models.Survey{},
-		&models.Question{},
-		&models.Option{},
-		&models.Manage{},
-		&models.Type{},
+		&model.User{},
+		&model.Survey{},
+		&model.Question{},
+		&model.Option{},
+		&model.Manage{},
+		&model.Type{},
 	)
 }

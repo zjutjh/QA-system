@@ -1,19 +1,41 @@
 package utils
 
 import (
-	"QA-System/internal/global/config"
-	WeJHSDK  "github.com/zjutjh/WeJH-SDK"
+	"errors"
 
+	"QA-System/internal/global/config"
+	"github.com/zjutjh/WeJH-SDK/aesHelper"
+	"go.uber.org/zap"
 )
 
+var encryptKey string
 
+// Init 读入 AES 密钥配置
+func Init() error {
+	encryptKey = config.Config.GetString("aes.key")
+	if len(encryptKey) != 16 && len(encryptKey) != 24 && len(encryptKey) != 32 {
+		return errors.New("AES 密钥长度必须为 16、24 或 32 字节")
+	}
+	err := aesHelper.Init(encryptKey)
+	return err
+}
+
+// AesEncrypt AES加密
 func AesEncrypt(orig string) string {
-	key := global.Config.GetString("aes.key")
-	return WeJHSDK.AesEncrypt(orig, key)
+	e, err := aesHelper.Encrypt(orig)
+	if err != nil {
+		zap.L().Error(err.Error())
+		return ""
+	}
+	return e
 }
 
+// AesDecrypt AES解密
 func AesDecrypt(cryted string) string {
-	key := global.Config.GetString("aes.key")
-	return WeJHSDK.AesDecrypt(cryted, key)
+	d, err := aesHelper.Decrypt(cryted)
+	if err != nil {
+		zap.L().Error(err.Error())
+		return ""
+	}
+	return d
 }
-
