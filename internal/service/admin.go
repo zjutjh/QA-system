@@ -659,7 +659,6 @@ func UpdateAdminPassword(id int, password string) error {
 	return err
 }
 
-
 // CreateQuestionPre 创建问题预先信息
 func CreateQuestionPre(name string, value []string) error {
 	// 将String[]类型转化为String,以逗号分隔
