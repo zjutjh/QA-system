@@ -31,3 +31,9 @@ func (d *Dao) UpdateUserPassword(ctx context.Context, uid int, password string) 
 	result := d.orm.WithContext(ctx).Model(&model.User{}).Where("id = ?", uid).Update("password", password)
 	return result.Error
 }
+
+// UpdateUserEmail 更新用户邮箱
+func (d *Dao) UpdateUserEmail(ctx context.Context, uid int, email string) error {
+	result := d.orm.WithContext(ctx).Model(&model.User{}).Where("id = ?", uid).Update("notify_email", email)
+	return result.Error
+}
