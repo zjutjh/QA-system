@@ -25,6 +25,9 @@ func GetAdminByUsername(username string) (*model.User, error) {
 	if user.Password != "" {
 		aesDecryptPassword(user)
 	}
+	if user.NotifyEmail != "" {
+		aesDecryptEmail(user)
+	}
 	return user, nil
 }
 
@@ -36,6 +39,9 @@ func GetAdminByID(id int) (*model.User, error) {
 	}
 	if user.Password != "" {
 		aesDecryptPassword(user)
+	}
+	if user.NotifyEmail != "" {
+		aesDecryptEmail(user)
 	}
 	return user, nil
 }
@@ -558,6 +564,11 @@ func aesDecryptPassword(user *model.User) {
 // aesEncryptPassword AES加密密码
 func aesEncryptPassword(user *model.User) {
 	user.Password = utils.AesEncrypt(user.Password)
+}
+
+// aesDecryptPassword AES解密密码
+func aesDecryptEmail(user *model.User) {
+	user.NotifyEmail = utils.AesDecrypt(user.NotifyEmail)
 }
 
 // HandleDownloadFile 处理下载文件
