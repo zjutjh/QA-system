@@ -80,7 +80,7 @@ func (p *Plugin1) GetMetadata() extension.PluginMetadata {
 func (p *Plugin1) Execute(params map[string]interface{}) error {
 	fmt.Println("Plugin1 executing with params:", params)
 	params["processed_by"] = "plugin1"
-	return nil
+    return nil
 }
 
 func init() {
@@ -132,6 +132,7 @@ plugins:
     - "plugin1"
     - "plugin2"
 ```
+
 **一定要加引号啊！不然可能读取不到** 
 上述的顺序就是先加载```plugin1```再加载```plugin2```
 

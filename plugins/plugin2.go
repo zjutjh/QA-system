@@ -15,7 +15,7 @@ func (p *Plugin2) GetMetadata() extension.PluginMetadata {
 		Author:      "Author2",
 		Description: "This is plugin 2",
 	}
-}
+} //这是另一种写metaData的方式
 
 func (p *Plugin2) Execute(params map[string]interface{}) error {
 	fmt.Println("Plugin2 executing with params:", params)

@@ -8,10 +8,10 @@ import (
 
 const (
 	PluginName  = "plugin1"
-	Version     = "1.0.0"
+	Version     = "0.0.1"
 	Author      = "Author1"
 	Description = "This is plugin 1"
-)
+) // 这是一种写metaData的方式
 
 type Plugin1 struct{}
 

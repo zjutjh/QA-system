@@ -12,6 +12,7 @@ import (
 	"QA-System/internal/dao"
 	"QA-System/internal/model"
 	"QA-System/internal/pkg/utils"
+
 	"github.com/xuri/excelize/v2"
 )
 
@@ -432,6 +433,7 @@ func contains(arr []string, str string) bool {
 	return false
 }
 
+// getOldImgs 获取旧的图片
 func getOldImgs(id int, questions []model.Question) ([]string, error) {
 	imgs := make([]string, 0)
 	survey, err := d.GetSurveyByID(ctx, id)
@@ -453,6 +455,7 @@ func getOldImgs(id int, questions []model.Question) ([]string, error) {
 	return imgs, nil
 }
 
+// getDelImgs 获取删除的图片
 func getDelImgs(id int, questions []model.Question, answerSheets []dao.AnswerSheet) ([]string, error) {
 	imgs := make([]string, 0)
 	survey, err := d.GetSurveyByID(ctx, id)
@@ -485,6 +488,7 @@ func getDelImgs(id int, questions []model.Question, answerSheets []dao.AnswerShe
 	return imgs, nil
 }
 
+// getDelFiles 获取删除的文件
 func getDelFiles(answerSheets []dao.AnswerSheet) ([]string, error) {
 	var files []string
 	for _, answerSheet := range answerSheets {
@@ -501,6 +505,7 @@ func getDelFiles(answerSheets []dao.AnswerSheet) ([]string, error) {
 	return files, nil
 }
 
+// createQuestionsAndOptions 创建问题和选项
 func createQuestionsAndOptions(questions []dao.Question, sid int) ([]string, error) {
 	imgs := make([]string, 0)
 	for _, question := range questions {
@@ -545,10 +550,12 @@ func DeleteAnswerSheetBySurveyID(surveyID int) error {
 	return err
 }
 
+// aesDecryptPassword AES解密密码
 func aesDecryptPassword(user *model.User) {
 	user.Password = utils.AesDecrypt(user.Password)
 }
 
+// aesEncryptPassword AES加密密码
 func aesEncryptPassword(user *model.User) {
 	user.Password = utils.AesEncrypt(user.Password)
 }
@@ -656,6 +663,13 @@ func HandleDownloadFile(answers dao.AnswersResonse, survey *model.Survey) (strin
 func UpdateAdminPassword(id int, password string) error {
 	encryptedPassword := utils.AesEncrypt(password)
 	err := d.UpdateUserPassword(ctx, id, encryptedPassword)
+	return err
+}
+
+// UpdateAdminEmail 更新管理员邮箱
+func UpdateAdminEmail(id int, email string) error {
+	encryptedEmail := utils.AesEncrypt(email)
+	err := d.UpdateUserEmail(ctx, id, encryptedEmail)
 	return err
 }
 

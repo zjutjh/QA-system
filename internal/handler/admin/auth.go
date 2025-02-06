@@ -7,6 +7,7 @@ import (
 	"QA-System/internal/pkg/code"
 	"QA-System/internal/pkg/utils"
 	"QA-System/internal/service"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -49,9 +50,10 @@ func Login(c *gin.Context) {
 }
 
 type registerData struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
-	Key      string `json:"key" binding:"required"`
+	Username    string `json:"username" binding:"required"`
+	Password    string `json:"password" binding:"required"`
+	Key         string `json:"key" binding:"required"`
+	NotifyEmail string `json:"notify_email"`
 }
 
 // Register 注册
@@ -76,9 +78,10 @@ func Register(c *gin.Context) {
 	}
 	// 创建用户
 	err = service.CreateAdmin(model.User{
-		Username:  data.Username,
-		Password:  data.Password,
-		AdminType: 1,
+		Username:    data.Username,
+		Password:    data.Password,
+		AdminType:   1,
+		NotifyEmail: data.NotifyEmail,
 	})
 	if err != nil {
 		code.AbortWithException(c, code.ServerError, err)
@@ -156,6 +159,33 @@ func ResetPassword(c *gin.Context) {
 	}
 	// 重置密码
 	err = service.UpdateAdminPassword(user.ID, "jhwl")
+	if err != nil {
+		code.AbortWithException(c, code.ServerError, err)
+		return
+	}
+	utils.JsonSuccessResponse(c, nil)
+}
+
+type updateEmail struct {
+	NewEmail string `json:"new_email" binding:"required,email"`
+}
+
+// UpdateEmail 修改邮箱
+func UpdateEmail(c *gin.Context) {
+	var data updateEmail
+	err := c.ShouldBindJSON(&data)
+	if err != nil {
+		code.AbortWithException(c, code.ParamError, err)
+		return
+	}
+	// 判断用户是否存在
+	user, err := service.GetUserSession(c)
+	if err != nil {
+		code.AbortWithException(c, code.NotLogin, err)
+		return
+	}
+	// 修改邮箱
+	err = service.UpdateAdminEmail(user.ID, data.NewEmail)
 	if err != nil {
 		code.AbortWithException(c, code.ServerError, err)
 		return
