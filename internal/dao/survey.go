@@ -15,16 +15,16 @@ func (d *Dao) CreateSurvey(ctx context.Context, survey model.Survey) (model.Surv
 }
 
 // UpdateSurveyStatus 更新问卷状态
-func (d *Dao) UpdateSurveyStatus(ctx context.Context, surveyID int, status int) error {
+func (d *Dao) UpdateSurveyStatus(ctx context.Context, surveyID string, status int) error {
 	err := d.orm.WithContext(ctx).Model(&model.Survey{}).Where("id = ?", surveyID).Update("status", status).Error
 	return err
 }
 
 // UpdateSurvey 更新问卷
 func (d *Dao) UpdateSurvey(
-	ctx context.Context, id int, surveyType, limit uint,
+	ctx context.Context, uuid string, surveyType, limit uint,
 	verify bool, title, desc, img string, deadline, startTime time.Time) error {
-	err := d.orm.WithContext(ctx).Model(&model.Survey{}).Where("id = ?", id).
+	err := d.orm.WithContext(ctx).Model(&model.Survey{}).Where("id = ?", uuid).
 		Updates(model.Survey{
 			Title:      title,
 			Desc:       desc,
@@ -46,8 +46,8 @@ func (d *Dao) GetAllSurveyByUserID(ctx context.Context, userId int) ([]model.Sur
 	return surveys, err
 }
 
-// GetSurveyByID 根据问卷ID获取问卷
-func (d *Dao) GetSurveyByID(ctx context.Context, surveyID int) (*model.Survey, error) {
+// GetSurveyByUUID 根据问卷UUID获取问卷
+func (d *Dao) GetSurveyByUUID(ctx context.Context, surveyID string) (*model.Survey, error) {
 	var survey model.Survey
 	err := d.orm.WithContext(ctx).Where("id = ?", surveyID).First(&survey).Error
 	return &survey, err
@@ -65,14 +65,14 @@ func (d *Dao) GetSurveyByTitle(ctx context.Context, title string, num, size int)
 }
 
 // IncreaseSurveyNum 增加问卷填写人数
-func (d *Dao) IncreaseSurveyNum(ctx context.Context, sid int) error {
+func (d *Dao) IncreaseSurveyNum(ctx context.Context, sid string) error {
 	err := d.orm.WithContext(ctx).Model(&model.Survey{}).Where("id = ?", sid).
 		Update("num", gorm.Expr("num + ?", 1)).Error
 	return err
 }
 
 // DeleteSurvey 删除问卷
-func (d *Dao) DeleteSurvey(ctx context.Context, surveyID int) error {
+func (d *Dao) DeleteSurvey(ctx context.Context, surveyID string) error {
 	err := d.orm.WithContext(ctx).Where("id = ?", surveyID).Delete(&model.Survey{}).Error
 	return err
 }
