@@ -2,9 +2,10 @@
 package plugins
 
 import (
-	"QA-System/internal/pkg/extension"
 	"fmt"
 	"time"
+
+	"QA-System/internal/pkg/extension"
 )
 
 type Plugin2 struct{}
@@ -16,7 +17,7 @@ func (p *Plugin2) GetMetadata() extension.PluginMetadata {
 		Author:      "Author2",
 		Description: "This is plugin 2",
 	}
-} //这是另一种写metaData的方式
+} // 这是另一种写metaData的方式
 
 func (p *Plugin2) Execute() error {
 	// 插件的主要逻辑

@@ -1,0 +1,49 @@
+name: Lint
+
+# 定义触发条件：在 `dev` 分支的 push 或 pull request 事件触发工作流
+on:
+  push:
+    branches:
+      - dev  # 当向 dev 分支推送时触发
+  pull_request:
+    branches:
+      - dev  # 当对 dev 分支发起拉取请求时触发
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest  # 指定工作流运行在最新的 Ubuntu 环境中
+
+    steps:
+      # 第一步：检查出代码
+      - name: Checkout code
+        uses: actions/checkout@v4  # 使用 GitHub 提供的 checkout 动作，确保代码在工作流环境中可用
+
+      # 第二步：设置 Go 环境
+      - name: Set up Go
+        uses: actions/setup-go@v5  # 使用 GitHub 提供的 setup-go 动作，设置 Go 环境
+        with:
+          go-version: stable
+          
+      # 第一坤步：安装 gci 和执行 gci
+      - name: Sort imports with gci
+        run: |
+          go install github.com/daixiang0/gci@latest
+          go install mvdan.cc/gofumpt@latest
+          gci write .
+
+      # 第二又四分之三步：用gofumpt格式化一遍
+      - name: Format code with gofmt
+        run: |
+          if ! gofumpt -l . | grep -q "^"; then
+            echo "Code is already formatted"
+          else
+            gofumpt -l -w .
+            git diff-index --quiet HEAD || (git config --global user.email "action@github.com" && git config --global user.name "GitHub Action" && git commit -am "Format code with gofmt" && git push)
+          fi
+
+
+      #第三步：运行 golangci-lint
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6  # 使用 golangci-lint-action
+        with:
+          args: '--config .golangci.yml'  # 使用指定的配置文件

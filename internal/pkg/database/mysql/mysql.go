@@ -21,7 +21,6 @@ func Init() *gorm.DB {
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true, // 关闭外键约束 提升数据库速度
 	})
-
 	if err != nil {
 		zap.L().Fatal("Failed to connect to MySQL:" + err.Error())
 	}

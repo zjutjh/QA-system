@@ -1,6 +1,7 @@
 package extension
 
 // 定义一个插件长啥样
+
 // PluginMetadata 插件元数据
 type PluginMetadata struct {
 	Name        string // 插件名称

@@ -19,7 +19,7 @@ func (pc *PluginChain) Add(plugin Plugin) *PluginChain {
 }
 
 // Execute 按顺序执行插件链中的所有插件
-func (pc *PluginChain) Execute(params map[string]interface{}) error {
+func (pc *PluginChain) Execute(params map[string]any) error {
 	for _, plugin := range pc.plugins {
 		if err := plugin.Execute(params); err != nil {
 			return err

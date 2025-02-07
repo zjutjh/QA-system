@@ -12,7 +12,6 @@ import (
 	"QA-System/internal/dao"
 	"QA-System/internal/model"
 	"QA-System/internal/pkg/utils"
-
 	"github.com/xuri/excelize/v2"
 )
 
@@ -55,6 +54,7 @@ func IsAdminExist(username string) error {
 // CreateAdmin 创建管理员
 func CreateAdmin(user model.User) error {
 	aesEncryptPassword(&user)
+	aesEncryptEmail(&user)
 	err := d.CreateUser(ctx, &user)
 	return err
 }
@@ -85,7 +85,8 @@ func CheckPermission(id int, surveyID int) error {
 
 // CreateSurvey 创建问卷
 func CreateSurvey(id int, title string, desc string, img string, questions []dao.Question,
-	status int, surveyType, limit uint, verify bool, ddl, startTime time.Time) error {
+	status int, surveyType, limit uint, verify bool, ddl, startTime time.Time,
+) error {
 	var survey model.Survey
 	survey.UserID = id
 	survey.Title = title
@@ -113,7 +114,8 @@ func UpdateSurveyStatus(id int, status int) error {
 
 // UpdateSurvey 更新问卷
 func UpdateSurvey(id int, surveyType, limit uint, verify bool, title string, desc string,
-	img string, questions []dao.Question, ddl, startTime time.Time) error {
+	img string, questions []dao.Question, ddl, startTime time.Time,
+) error {
 	// 遍历原有问题，删除对应选项
 	var oldQuestions []model.Question
 	var old_imgs []string
@@ -292,21 +294,17 @@ func GetSurveyAnswers(id int, num int, size int, text string, unique bool) (dao.
 	return dao.AnswersResonse{QuestionAnswers: data, Time: times}, total, nil
 }
 
-// GetAllSurveyByUserID 获取用户的所有问卷
-func GetAllSurveyByUserID(userId int) ([]model.Survey, error) {
-	return d.GetAllSurveyByUserID(ctx, userId)
+// GetSurveyByUserID 获取用户的所有问卷
+func GetSurveyByUserID(userId int) ([]model.Survey, error) {
+	return d.GetSurveyByUserID(ctx, userId)
 }
 
 // ProcessResponse 处理响应
-func ProcessResponse(response []any, pageNum, pageSize int, title string) ([]any, *int64) {
-	filteredResponse := make([]any, 0)
+func ProcessResponse(response []map[string]any, pageNum, pageSize int, title string) ([]map[string]any, *int64) {
+	filteredResponse := make([]map[string]any, 0)
 	if title != "" {
 		for _, item := range response {
-			itemMap, ok := item.(map[string]any)
-			if !ok {
-				continue
-			}
-			if strings.Contains(strings.ToLower(itemMap["title"].(string)), strings.ToLower(title)) { //nolint
+			if strings.Contains(strings.ToLower(item["title"].(string)), strings.ToLower(title)) { //nolint
 				filteredResponse = append(filteredResponse, item)
 			}
 		}
@@ -322,7 +320,7 @@ func ProcessResponse(response []any, pageNum, pageSize int, title string) ([]any
 	startIdx := (pageNum - 1) * pageSize
 	endIdx := startIdx + pageSize
 	if startIdx > len(filteredResponse) {
-		return []any{}, &num // 如果起始索引超出范围，返回空数据
+		return []map[string]any{}, &num // 如果起始索引超出范围，返回空数据
 	}
 	if endIdx > len(filteredResponse) {
 		endIdx = len(filteredResponse)
@@ -333,8 +331,8 @@ func ProcessResponse(response []any, pageNum, pageSize int, title string) ([]any
 }
 
 // GetAllSurvey 获取所有问卷
-func GetAllSurvey(pageNum, pageSize int, title string) ([]model.Survey, *int64, error) {
-	return d.GetSurveyByTitle(ctx, title, pageNum, pageSize)
+func GetAllSurvey() ([]model.Survey, error) {
+	return d.GetAllSurvey(ctx)
 }
 
 // SortSurvey 排序问卷
@@ -350,6 +348,7 @@ func SortSurvey(originalSurveys []model.Survey) []model.Survey {
 		if survey.Deadline.Before(time.Now()) {
 			survey.Status = 3
 			status3Surveys = append(status3Surveys, survey)
+			continue
 		}
 
 		if survey.Status == 1 {
@@ -359,14 +358,13 @@ func SortSurvey(originalSurveys []model.Survey) []model.Survey {
 		}
 	}
 
-	status2Surveys = append(status2Surveys, status1Surveys...)
-	sortedSurveys := append(status2Surveys, status3Surveys...)
+	sortedSurveys := append(append(status2Surveys, status1Surveys...), status3Surveys...)
 	return sortedSurveys
 }
 
 // GetSurveyResponse 获取问卷响应
-func GetSurveyResponse(surveys []model.Survey) []any {
-	response := make([]any, 0)
+func GetSurveyResponse(surveys []model.Survey) []map[string]any {
+	response := make([]map[string]any, 0)
 	for _, survey := range surveys {
 		surveyResponse := map[string]any{
 			"id":          survey.ID,
@@ -566,7 +564,12 @@ func aesEncryptPassword(user *model.User) {
 	user.Password = utils.AesEncrypt(user.Password)
 }
 
-// aesDecryptPassword AES解密密码
+// aesEncryptEmail AES加密邮箱
+func aesEncryptEmail(user *model.User) {
+	user.NotifyEmail = utils.AesEncrypt(user.NotifyEmail)
+}
+
+// aesDecryptEmail AES解密邮箱
 func aesDecryptEmail(user *model.User) {
 	user.NotifyEmail = utils.AesDecrypt(user.NotifyEmail)
 }
@@ -648,7 +651,7 @@ func HandleDownloadFile(answers dao.AnswersResonse, survey *model.Survey) (strin
 	fileName := survey.Title + ".xlsx"
 	filePath := "./public/xlsx/" + fileName
 	if _, err := os.Stat("./public/xlsx/"); os.IsNotExist(err) {
-		err := os.Mkdir("./public/xlsx/", 0750)
+		err := os.Mkdir("./public/xlsx/", 0o750)
 		if err != nil {
 			return "", errors.New("创建文件夹失败原因: " + err.Error())
 		}

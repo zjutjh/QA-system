@@ -478,19 +478,15 @@ func GetAllSurvey(c *gin.Context) {
 		return
 	}
 	// 获取问卷
-	var response []any
 	var surveys []model.Survey
-	var totalPageNum *int64
 	if user.AdminType == 2 {
-		surveys, totalPageNum, err = service.GetAllSurvey(data.PageNum, data.PageSize, data.Title)
+		surveys, err = service.GetAllSurvey()
 		if err != nil {
 			code.AbortWithException(c, code.ServerError, err)
 			return
 		}
-		surveys = service.SortSurvey(surveys)
-		response = service.GetSurveyResponse(surveys)
 	} else {
-		surveys, err = service.GetAllSurveyByUserID(user.ID)
+		surveys, err = service.GetSurveyByUserID(user.ID)
 		if err != nil {
 			code.AbortWithException(c, code.ServerError, err)
 			return
@@ -508,10 +504,10 @@ func GetAllSurvey(c *gin.Context) {
 			}
 			surveys = append(surveys, *managedSurvey)
 		}
-		surveys = service.SortSurvey(surveys)
-		response = service.GetSurveyResponse(surveys)
-		response, totalPageNum = service.ProcessResponse(response, data.PageNum, data.PageSize, data.Title)
 	}
+	surveys = service.SortSurvey(surveys)
+	response := service.GetSurveyResponse(surveys)
+	response, totalPageNum := service.ProcessResponse(response, data.PageNum, data.PageSize, data.Title)
 
 	utils.JsonSuccessResponse(c, gin.H{
 		"survey_list":    response,

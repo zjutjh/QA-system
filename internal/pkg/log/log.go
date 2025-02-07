@@ -135,7 +135,7 @@ func GetLogFilepath(filename string, suffix string) string {
 
 // createLogDirectory 创建日志目录
 func createLogDirectory(dir string) error {
-	if err := os.MkdirAll(dir, 0750); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		zap.S().Error("创建日志目录失败:", err)
 		return err
 	}
