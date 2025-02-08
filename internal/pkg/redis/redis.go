@@ -27,6 +27,12 @@ func init() {
 	StreamName = config.Config.GetString("redis.stream.name")
 	GroupName = config.Config.GetString("redis.stream.group")
 
+	// 创建 Stream（如果不存在）
+	if err := createStream(ctx); err != nil {
+		zap.L().Error("Failed to create stream", zap.Error(err))
+		panic(err)
+	}
+
 	// 创建消费者组
 	err := RedisClient.XGroupCreate(ctx, StreamName, GroupName, "0").Err()
 	if err != nil && err.Error() != "BUSYGROUP Consumer Group name already exists" {
