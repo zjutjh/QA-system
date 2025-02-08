@@ -1,9 +1,9 @@
-// plugins/plugin1.go
 package plugins
 
 import (
 	"QA-System/internal/pkg/extension"
 	"fmt"
+	"time"
 )
 
 const (
@@ -11,7 +11,7 @@ const (
 	Version     = "0.0.1"
 	Author      = "Author1"
 	Description = "This is plugin 1"
-) // 这是一种写metaData的方式
+)
 
 type Plugin1 struct{}
 
@@ -24,9 +24,10 @@ func (p *Plugin1) GetMetadata() extension.PluginMetadata {
 	}
 }
 
-func (p *Plugin1) Execute(params map[string]interface{}) error {
-	fmt.Println("Plugin1 executing with params:", params)
-	params["processed_by"] = "plugin1"
+func (p *Plugin1) Execute() error {
+	// 插件的主要逻辑
+	fmt.Println("Plugin1 executing at", time.Now().Format(time.RFC3339))
+	// 这里可以添加插件的具体功能代码
 	return nil
 }
 

@@ -16,7 +16,7 @@ var (
 
 // extension包自己的init函数，用来看一眼extension是不是被导入了
 func init() {
-	fmt.Println("插件包加载模块初始化成功 黑暗森林威慑建立")
+	fmt.Println("插件包加载模块初始化成功 阶梯计划成功")
 }
 
 // 在 RegisterPlugin()
@@ -58,18 +58,26 @@ func LoadPlugins() ([]Plugin, error) {
 
 // ExecutePlugins 依次执行插件链
 func ExecutePlugins(params map[string]interface{}) error {
-
 	pluginList, err := LoadPlugins()
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(pluginList)
+	// 启动所有插件的后台服务
 	for _, p := range pluginList {
-		err := p.Execute(params)
-		if err != nil {
-			return fmt.Errorf("plugin %s failed: %v", p.GetMetadata().Name, err)
-		}
+		metadata := p.GetMetadata()
+		zap.L().Info("Starting plugin service",
+			zap.String("name", metadata.Name),
+			zap.String("version", metadata.Version))
+
+		// 使用goroutine启动插件服务
+		go func(plugin Plugin) {
+			if err := plugin.Execute(); err != nil { // 移除了 nil 参数
+				zap.L().Error("Plugin service failed",
+					zap.String("name", plugin.GetMetadata().Name),
+					zap.Error(err))
+			}
+		}(p)
 	}
 
 	return nil

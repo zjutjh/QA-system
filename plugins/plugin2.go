@@ -4,6 +4,7 @@ package plugins
 import (
 	"QA-System/internal/pkg/extension"
 	"fmt"
+	"time"
 )
 
 type Plugin2 struct{}
@@ -17,9 +18,10 @@ func (p *Plugin2) GetMetadata() extension.PluginMetadata {
 	}
 } //这是另一种写metaData的方式
 
-func (p *Plugin2) Execute(params map[string]interface{}) error {
-	fmt.Println("Plugin2 executing with params:", params)
-	params["processed_by"] = "plugin2"
+func (p *Plugin2) Execute() error {
+	// 插件的主要逻辑
+	fmt.Println("Plugin1 executing at", time.Now().Format(time.RFC3339))
+	// 这里可以添加插件的具体功能代码
 	return nil
 }
 

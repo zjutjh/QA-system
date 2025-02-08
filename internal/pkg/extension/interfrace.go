@@ -11,8 +11,8 @@ type PluginMetadata struct {
 
 // Plugin 定义插件接口
 type Plugin interface {
-	GetMetadata() PluginMetadata                 // GetMetadata 获取插件元数据
-	Execute(params map[string]interface{}) error // Execute 执行插件功能
+	GetMetadata() PluginMetadata // GetMetadata 获取插件元数据
+	Execute() error              // Execute 执行插件功能
 }
 
 // 这里没有init函数是因为不导出的函数就算reflect也找不出来

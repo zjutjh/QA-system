@@ -7,6 +7,7 @@ import (
 	"QA-System/internal/pkg/database/mysql"
 	"QA-System/internal/pkg/extension"
 	"QA-System/internal/pkg/log"
+	_ "QA-System/internal/pkg/redis"
 	"QA-System/internal/pkg/session"
 	"QA-System/internal/pkg/utils"
 	"QA-System/internal/router"
@@ -26,11 +27,8 @@ func main() {
 	// 初始化日志系统
 	log.ZapInit()
 
-	// 初始化插件库
-	params := map[string]interface{}{
-		"question": "What is your name?",
-		"answer":   "John Doe",
-	}
+	// 把参数给到插件
+	params := map[string]interface{}{}
 
 	err := extension.ExecutePlugins(params)
 	if err != nil {
@@ -44,6 +42,9 @@ func main() {
 	// 初始化数据库
 	db := mysql.Init()
 	mdb := mongodb.Init()
+
+	// 初始化 RedisClient 的工作已经在导入时完成了
+
 	// 初始化dao
 	service.Init(db, mdb)
 	if err := utils.Init(); err != nil {

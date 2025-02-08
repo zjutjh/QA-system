@@ -14,6 +14,7 @@ import (
 
 	"QA-System/internal/dao"
 	"QA-System/internal/model"
+
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -74,6 +75,12 @@ func SubmitSurvey(sid int, data []dao.QuestionsList, t string) error {
 		return err
 	}
 	err = d.IncreaseSurveyNum(ctx, sid)
+	if err != nil {
+		return err
+	}
+
+	// 发送消息到消息队列
+	err = FromSurveyIDToStream(sid)
 	return err
 }
 

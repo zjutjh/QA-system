@@ -55,3 +55,23 @@ log:
   logMaxSize: 10           # 单个日志文件最大大小 单位: MB
   logMaxAge: 7             # 日志保留天数
   logCompress: false       # 是否压缩日志文件
+
+plugins:
+  order:
+    - "plugin1"
+    - "plugin2" 
+    - "email_notifier"
+
+# 邮件通知配置
+email_notifier:
+  smtp: 
+    host: "smtp.gmail.com"
+    port: 587
+    username: "your_email@gmail.com"
+    password: "your_app_password"  # 使用Gmail需生成应用专用密码
+    from: "your_email@gmail.com"
+  recipients:
+    - "admin@example.com"
+  template:
+    subject: "新问卷回复通知 - {{.survey_title}}"
+    body: "您收到一条新的问卷回复，请及时查看。"
