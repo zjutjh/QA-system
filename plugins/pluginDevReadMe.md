@@ -41,7 +41,7 @@ type PluginMetadata struct {
 // Plugin 定义插件接口
 type Plugin interface {
     GetMetadata() PluginMetadata                 // GetMetadata 获取插件元数据
-    Execute(params map[string]interface{}) error // Execute 执行插件具体的功能
+    Execute() error // Execute 执行插件具体的功能
 }
 ```
 
@@ -77,7 +77,7 @@ func (p *Plugin1) GetMetadata() extension.PluginMetadata {
 	}
 }
 
-func (p *Plugin1) Execute(params map[string]interface{}) error {
+func (p *Plugin1) Execute() error {
 	fmt.Println("Plugin1 executing with params:", params)
 	params["processed_by"] = "plugin1"
     return nil
@@ -110,7 +110,7 @@ func (p *Plugin2) GetMetadata() extension.PluginMetadata {
     }
 }
 
-func (p *Plugin2) Execute(params map[string]interface{}) error {
+func (p *Plugin2) Execute() error {
     fmt.Println("Plugin2 executing with params:", params)
     params["processed_by"] = "plugin2"
     return nil

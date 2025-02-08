@@ -19,7 +19,8 @@ func init() {
 	// 测试连接
 	ctx := context.Background()
 	if err := RedisClient.Ping(ctx).Err(); err != nil {
-		// return err
+		zap.L().Error("Failed to connect to Redis", zap.Error(err))
+		panic(err)
 	}
 
 	// 初始化 Stream 配置
@@ -29,13 +30,13 @@ func init() {
 	// 创建消费者组
 	err := RedisClient.XGroupCreate(ctx, StreamName, GroupName, "0").Err()
 	if err != nil && err.Error() != "BUSYGROUP Consumer Group name already exists" {
-		// return err
+		zap.L().Error("Failed to connect to Redis", zap.Error(err))
+		panic(err)
 	}
 
 	zap.L().Info("Redis initialized successfully",
 		zap.String("stream", StreamName),
 		zap.String("group", GroupName))
-	// return nil
 }
 
 // createStream 创建 Stream（如果不存在）
@@ -51,7 +52,7 @@ func createStream(ctx context.Context) error {
 	if exists == 0 {
 		if err := RedisClient.XAdd(ctx, &redis.XAddArgs{
 			Stream: StreamName,
-			Values: map[string]interface{}{"init": "stream_initialized"},
+			Values: map[string]any{"init": "stream_initialized"},
 		}).Err(); err != nil {
 			zap.L().Error("Failed to initialize stream", zap.Error(err))
 			return err
@@ -74,7 +75,7 @@ func createConsumerGroup(ctx context.Context) error {
 }
 
 // PublishToStream 发布消息到 Stream
-func PublishToStream(ctx context.Context, data map[string]interface{}) error {
+func PublishToStream(ctx context.Context, data map[string]any) error {
 	return RedisClient.XAdd(ctx, &redis.XAddArgs{
 		Stream: StreamName,
 		Values: data,

@@ -20,7 +20,7 @@ func FromSurveyIDToStream(surveyID int) error {
 		return err1
 	}
 	// 构造消息数据
-	data := map[string]interface{}{
+	data := map[string]any{
 		"creator_email": creator.NotifyEmail,
 		"survey_title":  survey.Title,
 		"timestamp":     time.Now().UnixNano(),

@@ -131,14 +131,14 @@ func (p *EmailNotifier) handleMessage(ctx context.Context, message redisv8.XMess
 	}
 
 	// 准备邮件数据
-	data := map[string]interface{}{
+	data := map[string]any{
 		"title": title,
 	}
 
 	return p.sendEmail(recipient, data)
 }
 
-func (p *EmailNotifier) sendEmail(recipient string, data map[string]interface{}) error {
+func (p *EmailNotifier) sendEmail(recipient string, data map[string]any) error {
 	var body bytes.Buffer
 	if err := p.mailTemplate.Execute(&body, data); err != nil {
 		return fmt.Errorf("failed to render email template: %v", err)

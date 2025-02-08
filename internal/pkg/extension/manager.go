@@ -19,7 +19,7 @@ func init() {
 	fmt.Println("插件包加载模块初始化成功 阶梯计划成功")
 }
 
-// 在 RegisterPlugin()
+// RegisterPlugin 向插件管理器注册插件
 func RegisterPlugin(p Plugin) {
 	mu.Lock()
 	defer mu.Unlock()
@@ -57,7 +57,7 @@ func LoadPlugins() ([]Plugin, error) {
 }
 
 // ExecutePlugins 依次执行插件链
-func ExecutePlugins(params map[string]interface{}) error {
+func ExecutePlugins() error {
 	pluginList, err := LoadPlugins()
 	if err != nil {
 		return err

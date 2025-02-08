@@ -28,16 +28,14 @@ func main() {
 	log.ZapInit()
 
 	// 把参数给到插件
-	params := map[string]interface{}{}
+	params := map[string]any{}
 
-	err := extension.ExecutePlugins(params)
+	err := extension.ExecutePlugins()
 	if err != nil {
 		fmt.Println("Error executing plugins:", err)
 		zap.L().Error("Error executing plugins", zap.Error(err), zap.Any("params", params))
 		return
 	}
-
-	fmt.Println("Processed params:", params)
 
 	// 初始化数据库
 	db := mysql.Init()
