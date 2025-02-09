@@ -1,9 +1,6 @@
 package plugins
 
 import (
-	"QA-System/internal/global/config"
-	"QA-System/internal/pkg/extension"
-	"QA-System/internal/pkg/redis"
 	"bytes"
 	"context"
 	"fmt"
@@ -11,26 +8,32 @@ import (
 	"text/template"
 	"time"
 
+	"QA-System/internal/global/config"
+	"QA-System/internal/pkg/extension"
+	"QA-System/internal/pkg/redis"
+
 	redisv8 "github.com/go-redis/redis/v8"
 	"go.uber.org/zap"
 )
 
+// EmailNotifier 插件需要的基本信息
 type EmailNotifier struct {
-	smtpHost     string
-	smtpPort     int
-	smtpUsername string
-	smtpPassword string
-	from         string
-	mailTemplate *template.Template
-	consumerName string
-	streamName   string
-	groupName    string
+	smtpHost     string             // SMTP服务器地址
+	smtpPort     int                // SMTP服务器端口
+	smtpUsername string             // SMTP服务器用户名
+	smtpPassword string             // SMTP服务器密码
+	from         string             // 发件人地址
+	mailTemplate *template.Template // 邮件模板
+	consumerName string             // stream的消费者名称
+	streamName   string             // stream的名称
+	groupName    string             // stream的消费者组名称
 }
 
 const emailTemplateText = `Subject: 您的问卷"{{.title}}"收到了新回复
 
 您的问卷"{{.title}}"收到了新回复，请及时查收。`
 
+// init 注册插件
 func init() {
 	notifier := &EmailNotifier{
 		consumerName: "email_notifier",
@@ -41,6 +44,7 @@ func init() {
 	extension.RegisterPlugin(notifier)
 }
 
+// initialize 从配置文件中读取配置信息
 func (p *EmailNotifier) initialize() error {
 	// 读取SMTP配置
 	p.smtpHost = config.Config.GetString("email_notifier.smtp.host")
@@ -56,6 +60,7 @@ func (p *EmailNotifier) initialize() error {
 	// 初始化邮件模板
 	tpl, err := template.New("email").Parse(emailTemplateText)
 	if err != nil {
+		zap.L().Error("Failed to parse email template", zap.Error(err))
 		return fmt.Errorf("failed to parse email template: %v", err)
 	}
 	p.mailTemplate = tpl
@@ -63,6 +68,7 @@ func (p *EmailNotifier) initialize() error {
 	return nil
 }
 
+// GetMetadata 返回插件的元数据
 func (p *EmailNotifier) GetMetadata() extension.PluginMetadata {
 	return extension.PluginMetadata{
 		Name:        "email_notifier",
@@ -75,7 +81,7 @@ func (p *EmailNotifier) GetMetadata() extension.PluginMetadata {
 // Execute 作为插件的服务入口，运行消息处理循环
 func (p *EmailNotifier) Execute() error {
 	ctx := context.Background()
-	ticker := time.NewTicker(1 * time.Hour)
+	ticker := time.NewTicker(1 * time.Hour) // 每小时处理一次消息
 	defer ticker.Stop()
 
 	zap.L().Info("Starting email notifier service",
@@ -92,6 +98,7 @@ func (p *EmailNotifier) Execute() error {
 	}
 }
 
+// processMessages 从Stream中读取消息并处理
 func (p *EmailNotifier) processMessages(ctx context.Context) error {
 	streams, err := redis.ConsumeFromStream(ctx, p.consumerName)
 	if err != nil {
@@ -118,6 +125,7 @@ func (p *EmailNotifier) processMessages(ctx context.Context) error {
 	return nil
 }
 
+// handleMessage 处理消息，从信息里把 title 和 creator_email 提取出来
 func (p *EmailNotifier) handleMessage(ctx context.Context, message redisv8.XMessage) error {
 	// 从消息中提取数据
 	title, ok := message.Values["survey_title"].(string)
@@ -138,9 +146,11 @@ func (p *EmailNotifier) handleMessage(ctx context.Context, message redisv8.XMess
 	return p.sendEmail(recipient, data)
 }
 
+// sendEmail 发送邮件
 func (p *EmailNotifier) sendEmail(recipient string, data map[string]any) error {
 	var body bytes.Buffer
 	if err := p.mailTemplate.Execute(&body, data); err != nil {
+		zap.L().Error("Failed to render email template", zap.Error(err))
 		return fmt.Errorf("failed to render email template: %v", err)
 	}
 
@@ -155,6 +165,7 @@ func (p *EmailNotifier) sendEmail(recipient string, data map[string]any) error {
 		body.Bytes(),
 	)
 	if err != nil {
+		zap.L().Error("Failed to send email", zap.Error(err))
 		return fmt.Errorf("failed to send email: %v", err)
 	}
 

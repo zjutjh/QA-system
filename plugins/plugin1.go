@@ -1,9 +1,10 @@
 package plugins
 
 import (
-	"QA-System/internal/pkg/extension"
 	"fmt"
 	"time"
+
+	"QA-System/internal/pkg/extension"
 )
 
 const (

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	global "QA-System/internal/global/config"
 	"QA-System/internal/middleware"
 	"QA-System/internal/pkg/database/mongodb"
@@ -13,8 +15,6 @@ import (
 	"QA-System/internal/router"
 	"QA-System/internal/service"
 	_ "QA-System/plugins"
-	"fmt"
-
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )

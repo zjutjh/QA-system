@@ -2,10 +2,10 @@
 package extension
 
 import (
-	"QA-System/internal/global/config"
 	"fmt"
 	"sync"
 
+	"QA-System/internal/global/config"
 	"go.uber.org/zap"
 )
 
