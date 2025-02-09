@@ -478,7 +478,7 @@ func GetAllSurvey(c *gin.Context) {
 		return
 	}
 	// 获取问卷
-	var response []any
+	var response []map[string]any
 	var surveys []model.Survey
 	var totalPageNum *int64
 	if user.AdminType == 2 {

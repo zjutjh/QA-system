@@ -291,15 +291,11 @@ func GetAllSurveyByUserID(userId int) ([]model.Survey, error) {
 }
 
 // ProcessResponse 处理响应
-func ProcessResponse(response []any, pageNum, pageSize int, title string) ([]any, *int64) {
-	filteredResponse := make([]any, 0)
+func ProcessResponse(response []map[string]any, pageNum, pageSize int, title string) ([]map[string]any, *int64) {
+	filteredResponse := make([]map[string]any, 0)
 	if title != "" {
 		for _, item := range response {
-			itemMap, ok := item.(map[string]any)
-			if !ok {
-				continue
-			}
-			if strings.Contains(strings.ToLower(itemMap["title"].(string)), strings.ToLower(title)) { //nolint
+			if strings.Contains(strings.ToLower(item["title"].(string)), strings.ToLower(title)) { //nolint
 				filteredResponse = append(filteredResponse, item)
 			}
 		}
@@ -315,7 +311,7 @@ func ProcessResponse(response []any, pageNum, pageSize int, title string) ([]any
 	startIdx := (pageNum - 1) * pageSize
 	endIdx := startIdx + pageSize
 	if startIdx > len(filteredResponse) {
-		return []any{}, &num // 如果起始索引超出范围，返回空数据
+		return []map[string]any{}, &num // 如果起始索引超出范围，返回空数据
 	}
 	if endIdx > len(filteredResponse) {
 		endIdx = len(filteredResponse)
@@ -358,8 +354,8 @@ func SortSurvey(originalSurveys []model.Survey) []model.Survey {
 }
 
 // GetSurveyResponse 获取问卷响应
-func GetSurveyResponse(surveys []model.Survey) []any {
-	response := make([]any, 0)
+func GetSurveyResponse(surveys []model.Survey) []map[string]any {
+	response := make([]map[string]any, 0)
 	for _, survey := range surveys {
 		surveyResponse := map[string]any{
 			"id":          survey.ID,
