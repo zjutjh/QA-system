@@ -29,7 +29,7 @@ jobs:
         run: |
           go install github.com/daixiang0/gci@latest
           go install mvdan.cc/gofumpt@latest
-          gci write ./...
+          gci write .
 
       # 第二又四分之三步：用gofumpt格式化一遍
       - name: Format code with gofmt
