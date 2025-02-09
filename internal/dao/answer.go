@@ -21,7 +21,7 @@ type Answer struct {
 
 // AnswerSheet mongodb答卷表模型
 type AnswerSheet struct {
-	SurveyID int      `json:"survey_id" bson:"surveyid"` // 问卷ID
+	SurveyID string   `json:"survey_id" bson:"surveyid"` // 问卷ID
 	Time     string   `json:"time" bson:"time"`          // 答卷时间
 	Unique   bool     `json:"unique" bson:"unique"`      // 是否唯一
 	Answers  []Answer `json:"answers" bson:"answers"`    // 答案列表
@@ -121,7 +121,7 @@ func contains(arr []int, item int) bool {
 
 // GetAnswerSheetBySurveyID 根据问卷ID分页获取答卷
 func (d *Dao) GetAnswerSheetBySurveyID(
-	ctx context.Context, surveyID int, pageNum int, pageSize int, text string, unique bool) (
+	ctx context.Context, surveyID string, pageNum int, pageSize int, text string, unique bool) (
 	[]AnswerSheet, *int64, error) {
 	answerSheets := make([]AnswerSheet, 0)
 	filter := bson.M{"surveyid": surveyID}
@@ -182,7 +182,7 @@ func (d *Dao) GetAnswerSheetBySurveyID(
 }
 
 // DeleteAnswerSheetBySurveyID 根据问卷ID删除答卷
-func (d *Dao) DeleteAnswerSheetBySurveyID(ctx context.Context, surveyID int) error {
+func (d *Dao) DeleteAnswerSheetBySurveyID(ctx context.Context, surveyID string) error {
 	filter := bson.M{"surveyid": surveyID}
 	// 删除所有满足条件的文档
 	_, err := d.mongo.Collection(database.QA).DeleteMany(ctx, filter)

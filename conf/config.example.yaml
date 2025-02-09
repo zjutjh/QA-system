@@ -9,8 +9,7 @@ mysql:
   user: root
   pass:
 
-
- session:
+session:
    name: QA-session
    secret: secret
 
