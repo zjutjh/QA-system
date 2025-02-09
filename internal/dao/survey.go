@@ -41,9 +41,8 @@ func (d *Dao) UpdateSurvey(
 // GetAllSurveyByUserID 获取用户的所有问卷
 func (d *Dao) GetAllSurveyByUserID(ctx context.Context, userId int) ([]model.Survey, error) {
 	var surveys []model.Survey
-	err := d.orm.WithContext(ctx).Model(model.Survey{}).Where("user_id = ?", userId).
-		Order("CASE WHEN status = 2 THEN 0 ELSE 1 END, id DESC").Find(&surveys).Error
-	return surveys, err
+	result := d.orm.WithContext(ctx).Model(model.Survey{}).Where("user_id = ?", userId).Find(&surveys)
+	return surveys, result.Error
 }
 
 // GetSurveyByID 根据问卷ID获取问卷
@@ -59,7 +58,6 @@ func (d *Dao) GetSurveyByTitle(ctx context.Context, title string, num, size int)
 	var sum int64
 	err := d.orm.WithContext(ctx).Model(model.Survey{}).
 		Where("title like ?", "%"+title+"%").
-		Order("CASE WHEN status = 2 THEN 0 ELSE 1 END").
 		Count(&sum).Limit(size).Offset((num - 1) * size).Find(&surveys).Error
 	return surveys, &sum, err
 }
