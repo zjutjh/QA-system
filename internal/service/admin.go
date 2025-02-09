@@ -285,9 +285,9 @@ func GetSurveyAnswers(id int, num int, size int, text string, unique bool) (dao.
 	return dao.AnswersResonse{QuestionAnswers: data, Time: times}, total, nil
 }
 
-// GetAllSurveyByUserID 获取用户的所有问卷
-func GetAllSurveyByUserID(userId int) ([]model.Survey, error) {
-	return d.GetAllSurveyByUserID(ctx, userId)
+// GetSurveyByUserID 获取用户的所有问卷
+func GetSurveyByUserID(userId int) ([]model.Survey, error) {
+	return d.GetSurveyByUserID(ctx, userId)
 }
 
 // ProcessResponse 处理响应
@@ -322,8 +322,8 @@ func ProcessResponse(response []map[string]any, pageNum, pageSize int, title str
 }
 
 // GetAllSurvey 获取所有问卷
-func GetAllSurvey(pageNum, pageSize int, title string) ([]model.Survey, *int64, error) {
-	return d.GetSurveyByTitle(ctx, title, pageNum, pageSize)
+func GetAllSurvey() ([]model.Survey, error) {
+	return d.GetAllSurvey(ctx)
 }
 
 // SortSurvey 排序问卷
@@ -339,6 +339,7 @@ func SortSurvey(originalSurveys []model.Survey) []model.Survey {
 		if survey.Deadline.Before(time.Now()) {
 			survey.Status = 3
 			status3Surveys = append(status3Surveys, survey)
+			continue
 		}
 
 		if survey.Status == 1 {
@@ -348,8 +349,7 @@ func SortSurvey(originalSurveys []model.Survey) []model.Survey {
 		}
 	}
 
-	status2Surveys = append(status2Surveys, status1Surveys...)
-	sortedSurveys := append(status2Surveys, status3Surveys...)
+	sortedSurveys := append(append(status2Surveys, status1Surveys...), status3Surveys...)
 	return sortedSurveys
 }
 
