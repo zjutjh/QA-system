@@ -24,21 +24,22 @@ jobs:
         with:
           go-version: stable
           
-      # # 第一坤步：安装 gci 和执行 gci
-      # - name: Sort imports with gci
-      #   run: |
-      #     go install github.com/daixiang0/gci@latest
-      #     gci write ./...
+      # 第一坤步：安装 gci 和执行 gci
+      - name: Sort imports with gci
+        run: |
+          go install github.com/daixiang0/gci@latest
+          go install mvdan.cc/gofumpt@latest
+          gci write ./...
 
-      # # 第二又四分之三步：用gofmt格式化一遍
-      # - name: Format code with gofmt
-      #   run: |
-      #     if ! gofmt -l . | grep -q "^"; then
-      #       echo "Code is already formatted"
-      #     else
-      #       gofmt -w .
-      #       git diff-index --quiet HEAD || (git config --global user.email "action@github.com" && git config --global user.name "GitHub Action" && git commit -am "Format code with gofmt" && git push)
-      #     fi
+      # 第二又四分之三步：用gofumpt格式化一遍
+      - name: Format code with gofmt
+        run: |
+          if ! gofumpt -l . | grep -q "^"; then
+            echo "Code is already formatted"
+          else
+            gofumpt -l -w .
+            git diff-index --quiet HEAD || (git config --global user.email "action@github.com" && git config --global user.name "GitHub Action" && git commit -am "Format code with gofmt" && git push)
+          fi
 
 
       #第三步：运行 golangci-lint

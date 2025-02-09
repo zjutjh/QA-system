@@ -12,6 +12,7 @@ import (
 	"QA-System/internal/dao"
 	"QA-System/internal/model"
 	"QA-System/internal/pkg/utils"
+
 	"github.com/xuri/excelize/v2"
 )
 
@@ -54,6 +55,7 @@ func IsAdminExist(username string) error {
 // CreateAdmin 创建管理员
 func CreateAdmin(user model.User) error {
 	aesEncryptPassword(&user)
+	aesEncryptEmail(&user)
 	err := d.CreateUser(ctx, &user)
 	return err
 }
@@ -565,7 +567,12 @@ func aesEncryptPassword(user *model.User) {
 	user.Password = utils.AesEncrypt(user.Password)
 }
 
-// aesDecryptPassword AES解密密码
+// aesEncryptEmail AES加密邮箱
+func aesEncryptEmail(user *model.User) {
+	user.NotifyEmail = utils.AesEncrypt(user.NotifyEmail)
+}
+
+// aesDecryptEmail AES解密邮箱
 func aesDecryptEmail(user *model.User) {
 	user.NotifyEmail = utils.AesDecrypt(user.NotifyEmail)
 }

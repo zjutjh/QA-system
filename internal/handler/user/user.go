@@ -22,7 +22,7 @@ type submitSurveyData struct {
 	QuestionsList []dao.QuestionsList `json:"questions_list"`
 }
 
-// SubmitSurvey 提交问卷
+// SubmitSurvey 提交一个问卷的答卷
 func SubmitSurvey(c *gin.Context) {
 	var data submitSurveyData
 	err := c.ShouldBindJSON(&data)
