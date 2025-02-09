@@ -11,7 +11,6 @@ import (
 	"QA-System/internal/global/config"
 	"QA-System/internal/pkg/extension"
 	"QA-System/internal/pkg/redis"
-
 	redisv8 "github.com/go-redis/redis/v8"
 	"go.uber.org/zap"
 )

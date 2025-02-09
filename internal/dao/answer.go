@@ -122,7 +122,8 @@ func contains(arr []int, item int) bool {
 // GetAnswerSheetBySurveyID 根据问卷ID分页获取答卷
 func (d *Dao) GetAnswerSheetBySurveyID(
 	ctx context.Context, surveyID int, pageNum int, pageSize int, text string, unique bool) (
-	[]AnswerSheet, *int64, error) {
+	[]AnswerSheet, *int64, error,
+) {
 	answerSheets := make([]AnswerSheet, 0)
 	filter := bson.M{"surveyid": surveyID}
 

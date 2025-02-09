@@ -12,7 +12,6 @@ import (
 	"QA-System/internal/dao"
 	"QA-System/internal/model"
 	"QA-System/internal/pkg/utils"
-
 	"github.com/xuri/excelize/v2"
 )
 
@@ -86,7 +85,8 @@ func CheckPermission(id int, surveyID int) error {
 
 // CreateSurvey 创建问卷
 func CreateSurvey(id int, title string, desc string, img string, questions []dao.Question,
-	status int, surveyType, limit uint, verify bool, ddl, startTime time.Time) error {
+	status int, surveyType, limit uint, verify bool, ddl, startTime time.Time,
+) error {
 	var survey model.Survey
 	survey.UserID = id
 	survey.Title = title
@@ -114,7 +114,8 @@ func UpdateSurveyStatus(id int, status int) error {
 
 // UpdateSurvey 更新问卷
 func UpdateSurvey(id int, surveyType, limit uint, verify bool, title string, desc string,
-	img string, questions []dao.Question, ddl, startTime time.Time) error {
+	img string, questions []dao.Question, ddl, startTime time.Time,
+) error {
 	// 遍历原有问题，删除对应选项
 	var oldQuestions []model.Question
 	var old_imgs []string
@@ -654,7 +655,7 @@ func HandleDownloadFile(answers dao.AnswersResonse, survey *model.Survey) (strin
 	fileName := survey.Title + ".xlsx"
 	filePath := "./public/xlsx/" + fileName
 	if _, err := os.Stat("./public/xlsx/"); os.IsNotExist(err) {
-		err := os.Mkdir("./public/xlsx/", 0750)
+		err := os.Mkdir("./public/xlsx/", 0o750)
 		if err != nil {
 			return "", errors.New("创建文件夹失败原因: " + err.Error())
 		}
