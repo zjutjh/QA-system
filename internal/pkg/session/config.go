@@ -4,8 +4,9 @@ import (
 	"strings"
 
 	"QA-System/internal/global/config"
-	"github.com/zjutjh/WeJH-SDK/redisHelper"
-	"github.com/zjutjh/WeJH-SDK/sessionHelper"
+
+	"github.com/SituChengxiang/WeJH-SDK/redisHelper"
+	"github.com/SituChengxiang/WeJH-SDK/sessionHelper"
 )
 
 type driver string
