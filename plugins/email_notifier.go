@@ -26,7 +26,8 @@ type EmailNotifier struct {
 	mailTemplate *template.Template    // 邮件模板
 	streamName   string                // stream的名称
 	groupName    string                // stream的消费者组名称
-	Consumer     string                // 处理消息的消费者
+	consumerOld  string                // 处理pending消息的消费者
+	consumerNew  string                // 处理新消息的消费者
 	workerNum    int                   // 工作协程数量
 	jobChan      chan redisv9.XMessage // 任务通道
 }
@@ -38,7 +39,8 @@ const emailTemplateText = `Subject: 您的问卷"{{.title}}"收到了新回复
 // init 注册插件
 func init() {
 	notifier := &EmailNotifier{
-		Consumer: "email_notifier",
+		consumerOld: "consumerOld",
+		consumerNew: "consumerNew",
 	}
 	if err := notifier.initialize(); err != nil {
 		panic(fmt.Sprintf("Failed to initialize email_notifier: %v", err))
@@ -58,7 +60,6 @@ func (p *EmailNotifier) initialize() error {
 	// 读取Stream配置
 	p.streamName = config.Config.GetString("redis.stream.name")
 	p.groupName = config.Config.GetString("redis.stream.group")
-	p.Consumer = "email_notifier"
 
 	// 读取工作协程配置
 	p.workerNum = config.Config.GetInt("email_notifier.worker.num")
@@ -82,13 +83,13 @@ func (p *EmailNotifier) initialize() error {
 func (p *EmailNotifier) GetMetadata() extension.PluginMetadata {
 	return extension.PluginMetadata{
 		Name:        "email_notifier",
-		Version:     "0.0.1",
-		Author:      "System",
+		Version:     "0.1.0",
+		Author:      "SituChengxiang, Copilot, Qwen2.5, DeepSeek",
 		Description: "Send email notifications for new survey responses",
 	}
 }
 
-// Execute 执行函数，单消费者多工作协程模式
+// Execute 启动消费者
 func (p *EmailNotifier) Execute() error {
 	ctx := context.Background()
 	zap.L().Info("Email notifier started", zap.Int("workers", p.workerNum))
@@ -98,8 +99,11 @@ func (p *EmailNotifier) Execute() error {
 		go p.startWorker(ctx, i)
 	}
 
-	// 启动消费者协程
-	return p.processMessages(ctx)
+	// 启动两个消费者
+	go p.consumeOld(ctx)
+	go p.consumeNew(ctx)
+
+	select {}
 }
 
 // 工作协程处理函数
@@ -107,11 +111,6 @@ func (p *EmailNotifier) startWorker(ctx context.Context, workerID int) {
 	zap.L().Info("Worker started", zap.Int("workerID", workerID))
 
 	for msg := range p.jobChan {
-		zap.L().Info("Worker received message",
-			zap.Int("workerID", workerID),
-			zap.String("ID", msg.ID),
-			zap.Any("Values", msg.Values)) // 调试信息
-
 		// 处理消息
 		if err := p.handleMessage(ctx, msg); err != nil {
 			zap.L().Error("Failed to handle message",
@@ -131,80 +130,64 @@ func (p *EmailNotifier) startWorker(ctx context.Context, workerID int) {
 	}
 }
 
-// processMessages 消息处理入口
-func (p *EmailNotifier) processMessages(ctx context.Context) error {
-	// 添加调试信息
-	p.debugStream(ctx)
-
+// consumeOld 处理 pending 消息
+func (p *EmailNotifier) consumeOld(ctx context.Context) {
 	for {
-		// 使用 XReadGroup 读取消息
+		// 使用 XAUTOCLAIM 自动认领 pending 消息
+		messages, _, err := redis.RedisClient.XAutoClaim(ctx, &redisv9.XAutoClaimArgs{
+			Stream:   p.streamName,
+			Group:    p.groupName,
+			Consumer: p.consumerOld,
+			MinIdle:  time.Minute * 5,
+			Start:    "0-0",
+			Count:    10,
+		}).Result()
+
+		if err != nil {
+			zap.L().Error("Failed to auto claim messages in consumerOld", zap.Error(err))
+			time.Sleep(time.Second)
+			continue
+		}
+
+		// 分发消息到工作协程
+		for _, msg := range messages {
+			p.jobChan <- msg
+		}
+
+		time.Sleep(time.Second)
+	}
+}
+
+// consumerNew 处理新消息
+func (p *EmailNotifier) consumeNew(ctx context.Context) {
+	for {
+		// 读取新消息
 		streams, err := redis.RedisClient.XReadGroup(ctx, &redisv9.XReadGroupArgs{
 			Group:    p.groupName,
-			Consumer: "email_notifier", // 修改为 "email_notifier"
+			Consumer: p.consumerNew,
 			Streams:  []string{p.streamName, ">"},
 			Count:    10,
 			Block:    time.Second * 2,
 		}).Result()
 
 		if err != nil && err != redisv9.Nil {
-			zap.L().Error("Failed to read messages", zap.Error(err))
+			zap.L().Error("Failed to read new messages in consumerNew", zap.Error(err))
 			time.Sleep(time.Second)
 			continue
 		}
 
 		if len(streams) > 0 && len(streams[0].Messages) > 0 {
-			// 分发消息到工作协程
 			for _, msg := range streams[0].Messages {
-				zap.L().Info("Message received",
-					zap.String("ID", msg.ID),
-					zap.Any("Values", msg.Values)) // 调试信息
 				p.jobChan <- msg
 			}
-		} else {
-			// 如果没有新消息，等待一段时间
-			time.Sleep(time.Second * 5)
 		}
+
+		time.Sleep(time.Second)
 	}
 }
 
-// debugStream 调试函数，查看消息流和消费者组信息
-func (p *EmailNotifier) debugStream(ctx context.Context) {
-	fmt.Print("古筝行动开始")
-	// 查看消息流中的所有消息
-	messages, err := redis.RedisClient.XRange(ctx, p.streamName, "-", "+").Result()
-	if err != nil {
-		zap.L().Error("Failed to read stream", zap.Error(err))
-		return
-	}
-
-	zap.L().Info("Stream content",
-		zap.String("stream", p.streamName),
-		zap.Int("message count", len(messages)))
-
-	for _, msg := range messages {
-		zap.L().Info("Message",
-			zap.String("ID", msg.ID),
-			zap.Any("Values", msg.Values))
-	}
-
-	// 使用 XINFO GROUPS 的替代方案
-	cmd := redis.RedisClient.Do(ctx, "XINFO", "GROUPS", p.streamName)
-	if err := cmd.Err(); err != nil {
-		zap.L().Error("Failed to get group info using raw command", zap.Error(err))
-		return
-	}
-
-	// 记录原始响应
-	if result, err := cmd.Result(); err == nil {
-		zap.L().Info("Consumer group raw info",
-			zap.String("stream", p.streamName),
-			zap.Any("info", result))
-	}
-}
-
-// handleMessage 处理消息，从信息里把 title 和 creator_email 提取出来
+// handleMessage 处理消息，从信息里提取 title 和 creator_email
 func (p *EmailNotifier) handleMessage(ctx context.Context, message redisv9.XMessage) error {
-	fmt.Println("正在编码消息……")
 	// 从消息中提取数据
 	title, ok := message.Values["survey_title"].(string)
 	if !ok {
@@ -218,18 +201,19 @@ func (p *EmailNotifier) handleMessage(ctx context.Context, message redisv9.XMess
 
 	// 准备邮件数据
 	data := map[string]any{
-		"title": title,
+		"title":     title,
+		"recipient": recipient,
 	}
 
 	zap.L().Info("Sending email",
 		zap.String("recipient", recipient),
-		zap.String("title", title)) // 调试信息
+		zap.String("title", title))
 
-	return p.sendEmail(recipient, data)
+	return p.sendEmail(data)
 }
 
 // sendEmail 发送邮件
-func (p *EmailNotifier) sendEmail(recipient string, data map[string]any) error {
+func (p *EmailNotifier) sendEmail(data map[string]any) error {
 	// 创建一个带超时的context
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -247,26 +231,14 @@ func (p *EmailNotifier) sendEmail(recipient string, data map[string]any) error {
 		auth := smtp.PlainAuth("", p.smtpUsername, p.smtpPassword, p.smtpHost)
 		addr := fmt.Sprintf("%s:%d", p.smtpHost, p.smtpPort)
 
-		zap.L().Info("Sending email via SMTP",
-			zap.String("recipient", recipient),
-			zap.String("SMTP address", addr)) // 调试信息
-
 		err := smtp.SendMail(
 			addr,
 			auth,
 			p.from,
-			[]string{recipient},
+			[]string{data["recipient"].(string)},
 			body.Bytes(),
 		)
 
-		if err != nil {
-			zap.L().Error("Failed to send email via SMTP",
-				zap.String("recipient", recipient),
-				zap.Error(err)) // 调试信息
-		} else {
-			zap.L().Info("Email sent successfully via SMTP",
-				zap.String("recipient", recipient)) // 调试信息
-		}
 		done <- err
 	}()
 
@@ -275,12 +247,13 @@ func (p *EmailNotifier) sendEmail(recipient string, data map[string]any) error {
 	case err := <-done:
 		if err != nil {
 			zap.L().Error("Failed to send email",
-				zap.String("recipient", recipient),
+				zap.String("recipient", data["recipient"].(string)),
+				zap.String("from", p.from),
 				zap.Error(err))
 			return fmt.Errorf("failed to send email: %v", err)
 		}
 		zap.L().Info("Email sent successfully",
-			zap.String("recipient", recipient),
+			zap.String("recipient", data["recipient"].(string)),
 			zap.String("title", data["title"].(string)))
 		return nil
 	case <-ctx.Done():
