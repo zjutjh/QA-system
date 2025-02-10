@@ -11,7 +11,6 @@ import (
 	"QA-System/internal/global/config"
 	"QA-System/internal/pkg/extension"
 	"QA-System/internal/pkg/redis"
-
 	redisv9 "github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
@@ -142,7 +141,6 @@ func (p *EmailNotifier) consumeOld(ctx context.Context) {
 			Start:    "0-0",
 			Count:    10,
 		}).Result()
-
 		if err != nil {
 			zap.L().Error("Failed to auto claim messages in consumerOld", zap.Error(err))
 			time.Sleep(time.Second)

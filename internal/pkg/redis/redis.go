@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"QA-System/internal/global/config"
-
 	"github.com/SituChengxiang/WeJH-SDK/redisHelper"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"

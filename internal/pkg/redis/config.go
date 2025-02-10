@@ -2,7 +2,6 @@ package redis
 
 import (
 	"QA-System/internal/global/config"
-
 	"github.com/SituChengxiang/WeJH-SDK/redisHelper"
 	"github.com/redis/go-redis/v9"
 )

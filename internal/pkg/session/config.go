@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"QA-System/internal/global/config"
-
 	"github.com/SituChengxiang/WeJH-SDK/redisHelper"
 	"github.com/SituChengxiang/WeJH-SDK/sessionHelper"
 )
