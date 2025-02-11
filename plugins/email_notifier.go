@@ -1,18 +1,17 @@
 package plugins
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"net/smtp"
-	"text/template"
 	"time"
 
 	"QA-System/internal/global/config"
 	"QA-System/internal/pkg/extension"
 	"QA-System/internal/pkg/redis"
+
 	redisv9 "github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
+	"gopkg.in/gomail.v2"
 )
 
 // EmailNotifier 插件需要的基本信息
@@ -22,7 +21,6 @@ type EmailNotifier struct {
 	smtpUsername string                // SMTP服务器用户名
 	smtpPassword string                // SMTP服务器密码
 	from         string                // 发件人地址
-	mailTemplate *template.Template    // 邮件模板
 	streamName   string                // stream的名称
 	groupName    string                // stream的消费者组名称
 	consumerOld  string                // 处理pending消息的消费者
@@ -30,10 +28,6 @@ type EmailNotifier struct {
 	workerNum    int                   // 工作协程数量
 	jobChan      chan redisv9.XMessage // 任务通道
 }
-
-const emailTemplateText = `Subject: 您的问卷"{{.title}}"收到了新回复
-
-您的问卷"{{.title}}"收到了新回复，请及时查收。`
 
 // init 注册插件
 func init() {
@@ -66,15 +60,6 @@ func (p *EmailNotifier) initialize() error {
 		p.workerNum = 3 // 默认3个工作协程
 	}
 	p.jobChan = make(chan redisv9.XMessage, p.workerNum*2)
-
-	// 初始化邮件模板
-	tpl, err := template.New("email").Parse(emailTemplateText)
-	if err != nil {
-		zap.L().Error("Failed to parse email template", zap.Error(err))
-		return fmt.Errorf("failed to parse email template: %v", err)
-	}
-	p.mailTemplate = tpl
-
 	return nil
 }
 
@@ -156,7 +141,7 @@ func (p *EmailNotifier) consumeOld(ctx context.Context) {
 	}
 }
 
-// consumerNew 处理新消息
+// consumeNew 处理新消息
 func (p *EmailNotifier) consumeNew(ctx context.Context) {
 	for {
 		// 读取新消息
@@ -201,6 +186,7 @@ func (p *EmailNotifier) handleMessage(ctx context.Context, message redisv9.XMess
 	data := map[string]any{
 		"title":     title,
 		"recipient": recipient,
+		"id":        message.ID,
 	}
 
 	zap.L().Info("Sending email",
@@ -220,39 +206,36 @@ func (p *EmailNotifier) sendEmail(data map[string]any) error {
 	done := make(chan error, 1)
 
 	go func() {
-		var body bytes.Buffer
-		if err := p.mailTemplate.Execute(&body, data); err != nil {
-			done <- fmt.Errorf("failed to render email template: %v", err)
+		// 创建邮件
+		m := gomail.NewMessage()
+		m.SetHeader("From", p.from)
+		m.SetHeader("To", data["recipient"].(string))
+		m.SetAddressHeader("Cc", p.from, "QA-System")
+		m.SetHeader("Subject", fmt.Sprintf("您的问卷\"%s\"收到了新回复", data["title"].(string)))
+		m.SetBody("text/plain", fmt.Sprintf("您的问卷\"%s\"收到了新回复，请及时查收。", data["title"].(string)))
+
+		// 发送邮件
+		d := gomail.NewDialer(p.smtpHost, p.smtpPort, p.smtpUsername, p.smtpPassword)
+		if err := d.DialAndSend(m); err != nil {
+			zap.L().Error("Failed to send email", zap.Error(err))
+			done <- err // 将错误发送到channel
 			return
 		}
-
-		auth := smtp.PlainAuth("", p.smtpUsername, p.smtpPassword, p.smtpHost)
-		addr := fmt.Sprintf("%s:%d", p.smtpHost, p.smtpPort)
-
-		err := smtp.SendMail(
-			addr,
-			auth,
-			p.from,
-			[]string{data["recipient"].(string)},
-			body.Bytes(),
-		)
-
-		done <- err
+		done <- nil // 发送nil表示成功
 	}()
 
 	// 等待邮件发送完成或超时
 	select {
 	case err := <-done:
 		if err != nil {
-			zap.L().Error("Failed to send email",
-				zap.String("recipient", data["recipient"].(string)),
-				zap.String("from", p.from),
-				zap.Error(err))
-			return fmt.Errorf("failed to send email: %v", err)
+			zap.L().Error("Failed to send email", zap.Error(err))
+			return err
 		}
-		zap.L().Info("Email sent successfully",
-			zap.String("recipient", data["recipient"].(string)),
-			zap.String("title", data["title"].(string)))
+		// 发送成功后确认消息，用QA系统里的redis包打包里的AckMessage函数，参数少一点
+		err = redis.AckMessage(ctx, data["id"].(string))
+		if err != nil {
+			zap.L().Warn("Failed to ack message", zap.Error(err))
+		}
 		return nil
 	case <-ctx.Done():
 		return fmt.Errorf("send email timeout after 10 seconds")

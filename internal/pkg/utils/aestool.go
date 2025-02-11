@@ -4,7 +4,8 @@ import (
 	"errors"
 
 	"QA-System/internal/global/config"
-	"github.com/SituChengxiang/WeJH-SDK/aesHelper"
+
+	"github.com/zjutjh/WeJH-SDK/aesHelper"
 	"go.uber.org/zap"
 )
 

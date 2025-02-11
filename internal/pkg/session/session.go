@@ -1,8 +1,8 @@
 package session
 
 import (
-	"github.com/SituChengxiang/WeJH-SDK/sessionHelper"
 	"github.com/gin-gonic/gin"
+	"github.com/zjutjh/WeJH-SDK/sessionHelper"
 	"go.uber.org/zap"
 )
 
