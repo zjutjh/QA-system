@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"QA-System/internal/global/config"
+
 	"go.uber.org/zap"
 )
 
@@ -15,9 +16,9 @@ var (
 )
 
 // extension包自己的init函数，用来看一眼extension是不是被导入了
-func init() {
-	fmt.Println("插件包加载模块初始化成功 阶梯计划成功")
-}
+// func init() {
+// 	fmt.Println("插件包加载模块初始化成功 阶梯计划成功")
+// }
 
 // RegisterPlugin 向插件管理器注册插件
 func RegisterPlugin(p Plugin) {
