@@ -13,7 +13,7 @@ import (
 	"QA-System/internal/pkg/utils"
 	"QA-System/internal/service"
 	"github.com/gin-gonic/gin"
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 )
 
 type submitSurveyData struct {
@@ -22,7 +22,7 @@ type submitSurveyData struct {
 	QuestionsList []dao.QuestionsList `json:"questions_list"`
 }
 
-// SubmitSurvey 提交问卷
+// SubmitSurvey 提交一个问卷的答卷
 func SubmitSurvey(c *gin.Context) {
 	var data submitSurveyData
 	err := c.ShouldBindJSON(&data)
