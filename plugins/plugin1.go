@@ -14,6 +14,7 @@ const (
 	Description = "This is plugin 1"
 )
 
+// Plugin1 示例插件1的结构，要给manager的
 type Plugin1 struct{}
 
 func (p *Plugin1) GetMetadata() extension.PluginMetadata {

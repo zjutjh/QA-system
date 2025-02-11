@@ -50,9 +50,17 @@ func (p *EmailNotifier) initialize() error {
 	p.smtpPassword = config.Config.GetString("email_notifier.smtp.password")
 	p.from = config.Config.GetString("email_notifier.smtp.from")
 
+	if p.smtpHost == "" || p.smtpUsername == "" || p.smtpPassword == "" || p.from == "" {
+		return fmt.Errorf("invalid SMTP configuration, this may lead to email sending failure")
+	}
+
 	// 读取Stream配置
 	p.streamName = config.Config.GetString("redis.stream.name")
 	p.groupName = config.Config.GetString("redis.stream.group")
+
+	if p.streamName == "" || p.groupName == "" {
+		zap.L().Warn("Stream name or group name is empty, email notifier will not work")
+	}
 
 	// 读取工作协程配置
 	p.workerNum = config.Config.GetInt("email_notifier.worker.num")
@@ -65,6 +73,7 @@ func (p *EmailNotifier) initialize() error {
 
 // GetMetadata 返回插件的元数据
 func (p *EmailNotifier) GetMetadata() extension.PluginMetadata {
+	_ = p
 	return extension.PluginMetadata{
 		Name:        "email_notifier",
 		Version:     "0.1.0",
@@ -171,6 +180,7 @@ func (p *EmailNotifier) consumeNew(ctx context.Context) {
 
 // handleMessage 处理消息，从信息里提取 title 和 creator_email
 func (p *EmailNotifier) handleMessage(ctx context.Context, message redisv9.XMessage) error {
+	_ = ctx
 	// 从消息中提取数据
 	title, ok := message.Values["survey_title"].(string)
 	if !ok {

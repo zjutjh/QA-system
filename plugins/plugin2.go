@@ -8,6 +8,7 @@ import (
 	"QA-System/internal/pkg/extension"
 )
 
+// Plugin2 示例插件2的结构
 type Plugin2 struct{}
 
 func (p *Plugin2) GetMetadata() extension.PluginMetadata {
