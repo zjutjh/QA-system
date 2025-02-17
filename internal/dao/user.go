@@ -41,13 +41,13 @@ func (d *Dao) InitializeCache() {
 	}
 }
 
-// startCacheCleanup 启动清理过期缓存的 goroutine
-func (d *Dao) StartCacheCleaner() {
+// StartCacheCleanup 启动清理过期缓存的 goroutine
+func (_ *Dao) StartCacheCleaner() {
 	ticker := time.NewTicker(cacheTTL / 2)
 	go func() {
 		for range ticker.C {
 			now := time.Now()
-			emailCache.Range(func(key, value interface{}) bool {
+			emailCache.Range(func(key, value any) bool {
 				cacheItem := value.(emailCacheItem)
 				if now.Sub(cacheItem.timestamp) > cacheTTL {
 					emailCache.Delete(key)

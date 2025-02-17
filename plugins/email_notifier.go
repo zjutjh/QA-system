@@ -2,6 +2,7 @@ package plugins
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -51,7 +52,7 @@ func (p *EmailNotifier) initialize() error {
 	p.from = config.Config.GetString("email_notifier.smtp.from")
 
 	if p.smtpHost == "" || p.smtpUsername == "" || p.smtpPassword == "" || p.from == "" {
-		return fmt.Errorf("invalid SMTP configuration, this may lead to email sending failure")
+		return errors.New("invalid SMTP configuration, this may lead to email sending failure")
 	}
 
 	// 读取Stream配置
@@ -73,6 +74,7 @@ func (p *EmailNotifier) initialize() error {
 
 // GetMetadata 返回插件的元数据
 func (p *EmailNotifier) GetMetadata() extension.PluginMetadata {
+	_ = p
 	return extension.PluginMetadata{
 		Name:        "email_notifier",
 		Version:     "0.1.0",
@@ -183,12 +185,12 @@ func (p *EmailNotifier) handleMessage(ctx context.Context, message redisv9.XMess
 	// 从消息中提取数据
 	title, ok := message.Values["survey_title"].(string)
 	if !ok {
-		return fmt.Errorf("invalid survey_title in message")
+		return fmt.Errorf("invalid survey_title %s in message", message)
 	}
 
 	recipient, ok := message.Values["creator_email"].(string)
 	if !ok {
-		return fmt.Errorf("invalid creator_email in message")
+		return fmt.Errorf("invalid creator_email %s in message", message)
 	}
 
 	// 准备邮件数据
@@ -252,6 +254,6 @@ func (p *EmailNotifier) sendEmail(data map[string]any) error {
 		}
 		return nil
 	case <-ctx.Done():
-		return fmt.Errorf("send email timeout after 10 seconds")
+		return errors.New("send email timeout after 10 seconds")
 	}
 }

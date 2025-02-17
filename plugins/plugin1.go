@@ -8,25 +8,27 @@ import (
 )
 
 const (
-	PluginName  = "plugin1"          // PluginName插件名
-	Version     = "0.0.1"            // Version版本号（学习AWS的版本名谢谢）
-	Author      = "Author1"          // Author作者
-	Description = "This is plugin 1" // Descrtption 插件描述
+	pluginName  = "plugin1"          // PluginName插件名
+	version     = "0.0.1"            // Version版本号（学习AWS的版本名谢谢）
+	author      = "Author1"          // Author作者
+	description = "This is plugin 1" // Descrtption 插件描述
 )
 
 // Plugin1 示例插件1的结构，要给manager的
 type Plugin1 struct{}
 
+// GetMetadata 获取插件的元数据
 func (p *Plugin1) GetMetadata() extension.PluginMetadata {
 	_ = p
 	return extension.PluginMetadata{
-		Name:        PluginName,
-		Version:     Version,
-		Author:      Author,
-		Description: Description,
+		Name:        pluginName,
+		Version:     version,
+		Author:      author,
+		Description: description,
 	}
 }
 
+// Execute 插件的执行函数
 func (p *Plugin1) Execute() error {
 	_ = p
 	// 插件的主要逻辑
