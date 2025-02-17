@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"QA-System/internal/model"
+
 	"go.mongodb.org/mongo-driver/mongo"
 	"gorm.io/gorm"
 )
@@ -17,16 +18,23 @@ type Dao struct {
 
 // New 实例化数据访问对象
 func New(orm *gorm.DB, mongodb *mongo.Database) *Dao {
-	return &Dao{
+	dao := &Dao{
 		orm:   orm,
 		mongo: mongodb,
 	}
+
+	// 初始化用户邮箱缓存和其清理操作
+	dao.InitializeCache()
+	go dao.StartCacheCleaner()
+
+	return dao
 }
 
 // Daos 数据访问对象接口
 type Daos interface {
 	GetUserByUsername(ctx context.Context, username string) (*model.User, error)
 	GetUserByID(ctx context.Context, id int) (*model.User, error)
+	GetUserEmailBuID(ctx context.Context, id int) (string, error)
 	CreateUser(ctx context.Context, user *model.User) error
 
 	SaveAnswerSheet(ctx context.Context, answerSheet AnswerSheet) error

@@ -12,6 +12,7 @@ import (
 	"QA-System/internal/dao"
 	"QA-System/internal/model"
 	"QA-System/internal/pkg/utils"
+
 	"github.com/xuri/excelize/v2"
 )
 
@@ -23,6 +24,9 @@ func GetAdminByUsername(username string) (*model.User, error) {
 	}
 	if user.Password != "" {
 		aesDecryptPassword(user)
+	}
+	if user.NotifyEmail != "" {
+		aesDecryptEmail(user)
 	}
 	return user, nil
 }
@@ -36,6 +40,9 @@ func GetAdminByID(id int) (*model.User, error) {
 	if user.Password != "" {
 		aesDecryptPassword(user)
 	}
+	if user.NotifyEmail != "" {
+		aesDecryptEmail(user)
+	}
 	return user, nil
 }
 
@@ -48,6 +55,7 @@ func IsAdminExist(username string) error {
 // CreateAdmin 创建管理员
 func CreateAdmin(user model.User) error {
 	aesEncryptPassword(&user)
+	aesEncryptEmail(&user)
 	err := d.CreateUser(ctx, &user)
 	return err
 }
@@ -56,6 +64,18 @@ func CreateAdmin(user model.User) error {
 func GetUserByName(username string) (*model.User, error) {
 	user, err := d.GetUserByUsername(ctx, username)
 	return user, err
+}
+
+// GetUserEmailByID 根据用户ID获取用户邮箱
+func GetUserEmailByID(id int) (string, error) {
+	encryptedEmail, err := d.GetUserEmailByID(ctx, id)
+	var email string
+	if encryptedEmail != "" {
+		email = utils.AesDecrypt(encryptedEmail)
+	} else {
+		email = ""
+	}
+	return email, err
 }
 
 // CreatePermission 创建权限
@@ -78,7 +98,8 @@ func CheckPermission(id int, surveyID int) error {
 
 // CreateSurvey 创建问卷
 func CreateSurvey(id int, title string, desc string, img string, questions []dao.Question,
-	status int, surveyType, limit uint, verify bool, ddl, startTime time.Time) error {
+	status int, surveyType, limit uint, verify bool, ddl, startTime time.Time,
+) error {
 	var survey model.Survey
 	survey.UserID = id
 	survey.Title = title
@@ -106,7 +127,8 @@ func UpdateSurveyStatus(id int, status int) error {
 
 // UpdateSurvey 更新问卷
 func UpdateSurvey(id int, surveyType, limit uint, verify bool, title string, desc string,
-	img string, questions []dao.Question, ddl, startTime time.Time) error {
+	img string, questions []dao.Question, ddl, startTime time.Time,
+) error {
 	// 遍历原有问题，删除对应选项
 	var oldQuestions []model.Question
 	var old_imgs []string
@@ -428,6 +450,7 @@ func contains(arr []string, str string) bool {
 	return false
 }
 
+// getOldImgs 获取旧的图片
 func getOldImgs(id int, questions []model.Question) ([]string, error) {
 	imgs := make([]string, 0)
 	survey, err := d.GetSurveyByID(ctx, id)
@@ -449,6 +472,7 @@ func getOldImgs(id int, questions []model.Question) ([]string, error) {
 	return imgs, nil
 }
 
+// getDelImgs 获取删除的图片
 func getDelImgs(id int, questions []model.Question, answerSheets []dao.AnswerSheet) ([]string, error) {
 	imgs := make([]string, 0)
 	survey, err := d.GetSurveyByID(ctx, id)
@@ -481,6 +505,7 @@ func getDelImgs(id int, questions []model.Question, answerSheets []dao.AnswerShe
 	return imgs, nil
 }
 
+// getDelFiles 获取删除的文件
 func getDelFiles(answerSheets []dao.AnswerSheet) ([]string, error) {
 	var files []string
 	for _, answerSheet := range answerSheets {
@@ -497,6 +522,7 @@ func getDelFiles(answerSheets []dao.AnswerSheet) ([]string, error) {
 	return files, nil
 }
 
+// createQuestionsAndOptions 创建问题和选项
 func createQuestionsAndOptions(questions []dao.Question, sid int) ([]string, error) {
 	imgs := make([]string, 0)
 	for _, question := range questions {
@@ -541,12 +567,24 @@ func DeleteAnswerSheetBySurveyID(surveyID int) error {
 	return err
 }
 
+// aesDecryptPassword AES解密密码
 func aesDecryptPassword(user *model.User) {
 	user.Password = utils.AesDecrypt(user.Password)
 }
 
+// aesEncryptPassword AES加密密码
 func aesEncryptPassword(user *model.User) {
 	user.Password = utils.AesEncrypt(user.Password)
+}
+
+// aesEncryptEmail AES加密邮箱
+func aesEncryptEmail(user *model.User) {
+	user.NotifyEmail = utils.AesEncrypt(user.NotifyEmail)
+}
+
+// aesDecryptEmail AES解密邮箱
+func aesDecryptEmail(user *model.User) {
+	user.NotifyEmail = utils.AesDecrypt(user.NotifyEmail)
 }
 
 // HandleDownloadFile 处理下载文件
@@ -626,7 +664,7 @@ func HandleDownloadFile(answers dao.AnswersResonse, survey *model.Survey) (strin
 	fileName := survey.Title + ".xlsx"
 	filePath := "./public/xlsx/" + fileName
 	if _, err := os.Stat("./public/xlsx/"); os.IsNotExist(err) {
-		err := os.Mkdir("./public/xlsx/", 0750)
+		err := os.Mkdir("./public/xlsx/", 0o750)
 		if err != nil {
 			return "", errors.New("创建文件夹失败原因: " + err.Error())
 		}
@@ -652,6 +690,13 @@ func HandleDownloadFile(answers dao.AnswersResonse, survey *model.Survey) (strin
 func UpdateAdminPassword(id int, password string) error {
 	encryptedPassword := utils.AesEncrypt(password)
 	err := d.UpdateUserPassword(ctx, id, encryptedPassword)
+	return err
+}
+
+// UpdateAdminEmail 更新管理员邮箱
+func UpdateAdminEmail(id int, email string) error {
+	encryptedEmail := utils.AesEncrypt(email)
+	err := d.UpdateUserEmail(ctx, id, encryptedEmail)
 	return err
 }
 
