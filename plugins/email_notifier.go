@@ -223,6 +223,11 @@ func (p *EmailNotifier) sendEmail(data map[string]any) error {
 		m.SetHeader("Subject", fmt.Sprintf("您的问卷\"%s\"收到了新回复", data["title"].(string)))
 		m.SetBody("text/plain", fmt.Sprintf("您的问卷\"%s\"收到了新回复，请及时查收。", data["title"].(string)))
 
+		if data["recipient"].(string) == "" {
+			zap.L().Info("Recipient email is empty, skip current sending email")
+			done <- nil
+		}
+
 		// 发送邮件
 		d := gomail.NewDialer(p.smtpHost, p.smtpPort, p.smtpUsername, p.smtpPassword)
 		if err := d.DialAndSend(m); err != nil {

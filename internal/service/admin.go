@@ -12,6 +12,7 @@ import (
 	"QA-System/internal/dao"
 	"QA-System/internal/model"
 	"QA-System/internal/pkg/utils"
+
 	"github.com/xuri/excelize/v2"
 )
 
@@ -63,6 +64,18 @@ func CreateAdmin(user model.User) error {
 func GetUserByName(username string) (*model.User, error) {
 	user, err := d.GetUserByUsername(ctx, username)
 	return user, err
+}
+
+// GetUserEmailByID 根据用户ID获取用户邮箱
+func GetUserEmailByID(id int) (string, error) {
+	encryptedEmail, err := d.GetUserEmailByID(ctx, id)
+	var email string
+	if encryptedEmail != "" {
+		email = utils.AesDecrypt(encryptedEmail)
+	} else {
+		email = ""
+	}
+	return email, err
 }
 
 // CreatePermission 创建权限

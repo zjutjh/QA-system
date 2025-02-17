@@ -16,13 +16,13 @@ func FromSurveyIDToStream(surveyID int) error {
 		return err
 	}
 
-	creator, err1 := GetAdminByID(survey.UserID)
+	creatorEmail, err1 := GetUserEmailByID(survey.UserID)
 	if err1 != nil {
 		return err1
 	}
 	// 构造消息数据
 	data := map[string]any{
-		"creator_email": creator.NotifyEmail,
+		"creator_email": creatorEmail,
 		"survey_title":  survey.Title,
 		"timestamp":     time.Now().UnixNano(),
 	}
